@@ -8,8 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.116.1" />
     <PackageReference Include="SMBLibrary" Version="1.5.5" />
     <PackageReference Include="SSH.NET" Version="2025.1.0" />
+    <PackageReference Include="ZXing.Net.Bindings.SkiaSharp" Version="0.16.21" />
   </ItemGroup>
 
 </Project>
