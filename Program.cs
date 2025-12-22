@@ -1,4 +1,5 @@
 ﻿using Org.BouncyCastle.Crypto.Agreement;
+using Org.BouncyCastle.Utilities.Zlib;
 using Renci.SshNet;
 using SkiaSharp;
 using SMBLibrary.Client;
@@ -9,6 +10,7 @@ using System.Text.RegularExpressions;
 using ZXing;
 using ZXing.Common;
 using ZXing.SkiaSharp;
+using static Test.Program;
 
 namespace Test
 {
@@ -16,7 +18,9 @@ namespace Test
     {
         static async Task Main(string[] args)
         {
-            Zxing();
+            //Zxing();
+            //ChangeImages();
+            OCRChange();
             Console.WriteLine();
             Console.ReadKey();
 
@@ -817,13 +821,12 @@ namespace Test
         }
         #endregion
 
-
-
         #region zXING
         public static void Zxing()
         {
-             string folderPath = @"C:\Users\liusi\Desktop\图片";
-
+            DateTime Pstarttime = DateTime.Now;
+            string folderPath = @"C:\Users\liusi\Desktop\121962";
+            string SaveImageFile = @"C:\Users\liusi\Desktop\12196Demo";
             // 检查文件夹是否存在
             if (!Directory.Exists(folderPath))
             {
@@ -865,6 +868,7 @@ namespace Test
             // 循环识别每个图片文件
             for (int i = 0; i < imageFiles.Count; i++)
             {
+                DateTime starttime= DateTime.Now;
                 string imagePath = imageFiles[i];
                 string fileName = Path.GetFileName(imagePath);
 
@@ -877,14 +881,39 @@ namespace Test
                     int currentPage = 0;
                     int totalPages = 0;
 
-                    var results = DecodeBarcodes(imageStream, out currentPage, out totalPages);
 
-                    if (results.Any())
+                    //識別QRCode
+                    //var results = DecodeQRcodes(imageStream, out currentPage, out totalPages);
+
+                    //if (results.Any())
+                    //{
+                    //    successCount++;
+                    //    Console.WriteLine($"  识别成功！找到 {results.Count} 个码：");
+
+                    //    foreach (var result in results)
+                    //    {
+                    //        Console.WriteLine($"    类型：{result.Type}，内容：{result.Content}");
+                    //    }
+                    //}
+                    //else
+                    //{
+                    //    failCount++;
+                    //    Console.WriteLine("  未识别到任何二维码");
+                    //}
+
+                    //Console.WriteLine("--------------------------------------------------");
+
+
+                    string ImageFile =SaveImageFile +@"\"+ Path.GetFileNameWithoutExtension(fileName);
+                    //識別Barcode[Code128]
+                    var Barcodesresults = DecodeBarcodes(imageStream, out currentPage, out totalPages, ImageFile);
+
+                    if (Barcodesresults.Any())
                     {
                         successCount++;
-                        Console.WriteLine($"  识别成功！找到 {results.Count} 个码：");
+                        Console.WriteLine($"  识别成功！找到 {Barcodesresults.Count} 个码：");
 
-                        foreach (var result in results)
+                        foreach (var result in Barcodesresults)
                         {
                             Console.WriteLine($"    类型：{result.Type}，内容：{result.Content}");
                         }
@@ -892,15 +921,18 @@ namespace Test
                     else
                     {
                         failCount++;
-                        Console.WriteLine("  未识别到任何二维码或条形码");
+                        Console.WriteLine("  未识别到任何條形码");
                     }
+
                 }
                 catch (Exception ex)
                 {
                     failCount++;
                     Console.WriteLine($"  识别失败：{ex.Message}");
                 }
-
+                DateTime endtime = DateTime.Now;
+                TimeSpan duration = endtime - starttime;
+                Console.WriteLine($"图片总耗时: {duration.TotalSeconds} 秒");
                 Console.WriteLine("--------------------------------------------------");
             }
 
@@ -912,6 +944,9 @@ namespace Test
             Console.WriteLine($"识别失败：{failCount}");
             Console.WriteLine($"成功率：{((double)successCount / totalImages * 100):F2}%");
 
+            DateTime Pendtime = DateTime.Now;
+            TimeSpan Pduration = Pendtime - Pstarttime;
+            Console.WriteLine($"程序总耗时: {Pduration.TotalSeconds} 秒");
 
             // Stream image = ReadLocalFileToStream("C:\\Users\\liusi\\Desktop\\图片\\18.jpg");
             // int currentPage = 0;
@@ -921,7 +956,6 @@ namespace Test
             // //读取本地图片
             // Console.WriteLine();
         }
-
 
         // 新增方法：获取指定文件夹中的所有图片文件
         public static List<string> GetAllImageFiles(string folderPath)
@@ -986,7 +1020,7 @@ namespace Test
             return memoryStream;
         }
 
-        public static List<DetectedObject> DecodeBarcodes(Stream imageStream, out int currentPage, out int totalPages)
+        public static List<DetectedObject> DecodeQRcodes(Stream imageStream, out int currentPage, out int totalPages)
         {
             var detectedObjects = new List<DetectedObject>();
             currentPage = 0;
@@ -1002,7 +1036,7 @@ namespace Test
                 }
                 Console.WriteLine($"图像尺寸：{skBitmap.Width}x{skBitmap.Height}");
 
-                // ========== 改进的解码器配置 ==========
+                //解码器配置
                 Func<BarcodeFormat, BarcodeReaderGeneric> CreateReader = (format) =>
                 {
                     return new BarcodeReaderGeneric
@@ -1013,12 +1047,19 @@ namespace Test
                             TryHarder = true,
                             PureBarcode = false,
                             PossibleFormats = new List<BarcodeFormat> {
-                        BarcodeFormat.QR_CODE,
-                        BarcodeFormat.CODE_128,
-                        BarcodeFormat.CODE_39,
-                        BarcodeFormat.DATA_MATRIX,
-                        BarcodeFormat.PDF_417,
-                        BarcodeFormat.AZTEC
+                            BarcodeFormat.QR_CODE
+                            //,
+                            //BarcodeFormat.CODE_128
+                            //,
+                            //BarcodeFormat.CODE_39,
+                            //BarcodeFormat.DATA_MATRIX,
+                            //BarcodeFormat.PDF_417,
+                            //BarcodeFormat.AZTEC,
+                            //BarcodeFormat.CODABAR,
+                            //BarcodeFormat.EAN_8,
+                            //BarcodeFormat.EAN_13,
+                            //BarcodeFormat.UPC_A,
+                            //BarcodeFormat.UPC_E
                     },
                             // 添加字符集支持
                             CharacterSet = "UTF-8"
@@ -1026,52 +1067,68 @@ namespace Test
                     };
                 };
 
-                // ========== 方法1：直接解码（不预处理） ==========
-                var directResults = TryDecodeDirect(skBitmap, CreateReader);
-                if (directResults.Any())
-                {
-                    detectedObjects.AddRange(directResults);
-                    Console.WriteLine("直接解码成功");
-                }
+                Console.WriteLine("开始识别...");
 
-                // ========== 方法2：轻度预处理解码 ==========
-                if (!detectedObjects.Any())
+                if (!QuickDetectQRCode(skBitmap))
                 {
-                    var lightProcessResults = TryDecodeWithLightProcessing(skBitmap, CreateReader);
-                    if (lightProcessResults.Any())
-                    {
-                        detectedObjects.AddRange(lightProcessResults);
-                        Console.WriteLine("轻度预处理解码成功");
-                    }
+                    Console.WriteLine("快速检测：图片中未发现二维码特征，跳过复杂处理");
+                    // 只执行最简单的直接解码
+                    detectedObjects = TryDecodeDirect(skBitmap, CreateReader);
+                    Console.WriteLine($"快速检测结果：识别到 {detectedObjects.Count} 个码");
+                    return detectedObjects;
                 }
 
 
-                // ========== 方法3：重度预处理解码 ==========
-                if (!detectedObjects.Any())
+                // 多级预处理组合
+                var strategyResults = new List<DetectedObject>();
+
+                //直接解码（不预处理）
+                Console.WriteLine("直接解码");
+                strategyResults.AddRange(TryDecodeDirect(skBitmap, CreateReader));
+                if (strategyResults.Any()) Console.WriteLine("直接解码成功");
+
+                //轻度预处理
+                if (!strategyResults.Any())
                 {
-                    var heavyProcessResults = TryDecodeWithHeavyProcessing(skBitmap, CreateReader);
-                    if (heavyProcessResults.Any())
-                    {
-                        detectedObjects.AddRange(heavyProcessResults);
-                        Console.WriteLine("重度预处理解码成功");
-                    }
+                    Console.WriteLine("轻度预处理组合");
+                    var lightResults = TryDecodeWithMultiLightProcessing(skBitmap, CreateReader);
+                    strategyResults.AddRange(lightResults);
+                    if (lightResults.Any()) Console.WriteLine("轻度预处理组合成功");
                 }
 
-
-                // ========== 方法4：多区域扫描 ==========
-                if (!detectedObjects.Any())
+                // 重度预处理
+                if (!strategyResults.Any())
                 {
-                    var multiRegionResults = TryDecodeMultipleRegions(skBitmap, CreateReader);
-                    if (multiRegionResults.Any())
-                    {
-                        detectedObjects.AddRange(multiRegionResults);
-                        Console.WriteLine("多区域扫描成功");
-                    }
+                    Console.WriteLine("重度预处理组合");
+                    var heavyResults = TryDecodeWithHeavyProcessing(skBitmap, CreateReader);
+                    strategyResults.AddRange(heavyResults);
+                    if (heavyResults.Any()) Console.WriteLine("重度预处理组合成功");
                 }
+
+                // 多区域扫描
+                if (!strategyResults.Any())
+                {
+                    Console.WriteLine("开始多区域扫描");
+                    var regionResults = TryDecodeMultipleRegionsEnhanced(skBitmap, CreateReader);
+                    strategyResults.AddRange(regionResults);
+                    if (regionResults.Any()) Console.WriteLine("多区域扫描成功");
+                }
+
+                //自适应
+                if (!strategyResults.Any())
+                {
+                    Console.WriteLine("开始自适应参数组合");
+                    var adaptiveResults = TryDecodeWithAdaptiveParameters(skBitmap, CreateReader);
+                    strategyResults.AddRange(adaptiveResults);
+                    if (adaptiveResults.Any()) Console.WriteLine("自适应参数组合成功");
+                }
+
+                // 去重处理
+                detectedObjects = strategyResults
+                    .DistinctBy(x => x.Content)
+                    .ToList();
 
                 Console.WriteLine($"总共识别到 {detectedObjects.Count} 个码");
-
-
             }
             catch (Exception ex)
             {
@@ -1081,8 +1138,331 @@ namespace Test
             return detectedObjects;
         }
 
+        public static List<DetectedObject> DecodeBarcodes(Stream imageStream, out int currentPage, out int totalPages,string ImageFile)
+        {
+            var detectedObjects = new List<DetectedObject>();
+            currentPage = 0;
+            totalPages = 0;
 
-        // ========== 直接解码（不预处理） ==========
+            try
+            {
+                using var skBitmap = SKBitmap.Decode(imageStream);
+                if (skBitmap == null)
+                {
+                    Console.WriteLine("图像解码失败：SKBitmap.Decode返回null");
+                    return detectedObjects;
+                }
+                Console.WriteLine($"图像尺寸：{skBitmap.Width}x{skBitmap.Height}");
+
+                #region 新解碼
+                // 保存原始图像
+                //SaveBitmapToFile(skBitmap, "original.png", ImageFile);
+
+                //解码器配置
+                Func<BarcodeFormat, BarcodeReaderGeneric> CreateReader = (format) =>
+                {
+                    return new BarcodeReaderGeneric
+                    {
+                        AutoRotate = true,
+                        Options = new DecodingOptions
+                        {
+                            TryHarder = true,
+                            PureBarcode = false,
+                            PossibleFormats = new List<BarcodeFormat> {
+                            //BarcodeFormat.QR_CODE
+                            //,
+                            BarcodeFormat.CODE_128
+                            //,
+                            //BarcodeFormat.CODE_39,
+                            //BarcodeFormat.DATA_MATRIX,
+                            //BarcodeFormat.PDF_417,
+                            //BarcodeFormat.AZTEC,
+                            //BarcodeFormat.CODABAR,
+                            //BarcodeFormat.EAN_8,
+                            //BarcodeFormat.EAN_13,
+                            //BarcodeFormat.UPC_A,
+                            //BarcodeFormat.UPC_E
+                            },
+                            // 添加字符集支持
+                            CharacterSet = "UTF-8"
+                        }
+                    };
+                };
+
+                Console.WriteLine("开始裁剪圖片...");
+
+                // Crop to right half
+                int halfWidth = skBitmap.Width / 2;
+                int rightX = skBitmap.Width - halfWidth;
+
+                var rightHalfRect = new SKRectI(rightX, 0, skBitmap.Width, skBitmap.Height);
+                using var rightHalfBitmap = new SKBitmap(rightHalfRect.Width, rightHalfRect.Height);
+                skBitmap.ExtractSubset(rightHalfBitmap, rightHalfRect);
+
+                // 保存右半部分图像
+                //SaveBitmapToFile(rightHalfBitmap, "right_half.png", ImageFile);
+
+                // Crop to bottom 3/16 of the right half
+                int bottomHeight = rightHalfBitmap.Height * 2 / 16;
+                int bottomY = rightHalfBitmap.Height - bottomHeight;
+
+                var bottomRect = new SKRectI(0, bottomY, rightHalfBitmap.Width, rightHalfBitmap.Height);
+                using var croppedBitmap = new SKBitmap(bottomRect.Width, bottomRect.Height);
+                rightHalfBitmap.ExtractSubset(croppedBitmap, bottomRect);
+
+                Console.WriteLine($"裁剪后图像尺寸：{croppedBitmap.Width}x{croppedBitmap.Height}");
+
+
+                // 保存裁剪后的图像
+                SaveBitmapToFile(croppedBitmap, "cropped.png", ImageFile);
+
+                Console.WriteLine("开始识别...");
+
+                // ========== 新增：放大倍数识别测试 ==========
+
+                // 测试不同的放大倍数
+                //float[] magnifications = { 1.0f, 1.5f, 2.0f, 2.5f, 3.0f, 5.0f, 10.0f, 15.0f };
+                //float[] magnifications = { 1.0f};
+                // 多级预处理组合
+                var strategyResults = new List<DetectedObject>();
+
+                //foreach (float mag in magnifications)
+                //{
+                //    Console.WriteLine($"尝试放大倍数: {mag}x");
+                //    Console.WriteLine($"-------------------------START({mag}x)-------------------------");
+
+                var magnifiedBitmap = croppedBitmap;
+                //if (mag!=1)
+                //{
+                //     magnifiedBitmap = TryDecodeWithMagnification(croppedBitmap, CreateReader, mag, ImageFile);
+                //}
+
+                //直接解码（不预处理）
+                Console.WriteLine("直接解码");
+                strategyResults.AddRange(TryDecodeDirect(magnifiedBitmap, CreateReader));
+
+                if (strategyResults.Any()) Console.WriteLine("直接解码成功");
+
+                //轻度预处理
+                if (!strategyResults.Any())
+                {
+                    Console.WriteLine("轻度预处理组合");
+                    var lightResults = TryDecodeWithMultiLightProcessing(magnifiedBitmap, CreateReader, ImageFile);
+                    strategyResults.AddRange(lightResults);
+                    if (lightResults.Any()) Console.WriteLine("轻度预处理组合成功");
+                }
+
+                // 重度预处理
+                if (!strategyResults.Any())
+                {
+                    Console.WriteLine("重度预处理组合");
+                    var heavyResults = TryDecodeWithHeavyProcessing(magnifiedBitmap, CreateReader, ImageFile);
+                    strategyResults.AddRange(heavyResults);
+                    if (heavyResults.Any()) Console.WriteLine("重度预处理组合成功");
+                }
+
+                //自适应
+                if (!strategyResults.Any())
+                {
+                    Console.WriteLine("开始自适应参数组合");
+                    var adaptiveResults = TryDecodeWithAdaptiveParameters(magnifiedBitmap, CreateReader);
+                    strategyResults.AddRange(adaptiveResults);
+                    if (adaptiveResults.Any()) Console.WriteLine("自适应参数组合成功");
+                }
+                //Console.WriteLine($"-------------------------END({mag}x)-------------------------");
+
+                //    if (strategyResults.Any())
+                //    {
+                //        break;
+                //    }
+                //}
+
+                //if (magnificationResults.Any())
+                //{
+                //    detectedObjects = magnificationResults;
+                //    Console.WriteLine($"放大识别成功：识别到 {detectedObjects.Count} 个码");
+                //    return detectedObjects;
+                //}
+
+                // 去重处理
+                detectedObjects = strategyResults
+                    .DistinctBy(x => x.Content)
+                    .ToList();
+
+                Console.WriteLine($"总共识别到 {detectedObjects.Count} 个码");
+                #endregion
+
+                #region 舊解碼
+                //// Crop to right half
+                //int halfWidth = skBitmap.Width / 2;
+                //int rightX = skBitmap.Width - halfWidth;
+
+                //var rightHalfRect = new SKRectI(rightX, 0, skBitmap.Width, skBitmap.Height);
+                //using var rightHalfBitmap = new SKBitmap(rightHalfRect.Width, rightHalfRect.Height);
+                //skBitmap.ExtractSubset(rightHalfBitmap, rightHalfRect);
+
+                //// Crop to bottom 3/16 of the right half
+                //int bottomHeight = rightHalfBitmap.Height * 3 / 16;
+                //int bottomY = rightHalfBitmap.Height - bottomHeight;
+
+                //var bottomRect = new SKRectI(0, bottomY, rightHalfBitmap.Width, rightHalfBitmap.Height);
+                //using var croppedBitmap = new SKBitmap(bottomRect.Width, bottomRect.Height);
+                //rightHalfBitmap.ExtractSubset(croppedBitmap, bottomRect);
+
+
+                //var bcLuminanceSource = new SKBitmapLuminanceSource(croppedBitmap);
+                //var barcodeReader = new BarcodeReaderGeneric
+                //{
+                //    AutoRotate = true,
+                //    Options = new DecodingOptions
+                //    {
+                //        TryHarder = true,
+                //        PureBarcode = false,
+                //        PossibleFormats = new List<BarcodeFormat> { BarcodeFormat.CODE_128 }
+                //    }
+                //};
+                //var bcResults = barcodeReader.DecodeMultiple(bcLuminanceSource);
+                //if (bcResults != null)
+                //{
+                //    foreach (var result in bcResults)
+                //    {
+                //        detectedObjects.Add(new DetectedObject
+                //        {
+                //            Type = result.BarcodeFormat.ToString(),
+                //            Content = result.Text
+                //        });
+                //    }
+                //}
+                #endregion
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"條形碼识别异常：{ex.Message}");
+                Console.WriteLine($"StackTrace：{ex.StackTrace}");
+            }
+            return detectedObjects;
+        }
+
+        // ========== 新增：保存图像到文件 ==========
+        private static void SaveBitmapToFile(SKBitmap bitmap, string fileName, string ImageFile)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(ImageFile) || string.IsNullOrEmpty(fileName) || bitmap==null)
+                {
+                    return;
+                }
+                // 指定保存到D盘特定文件夹
+                string savePath = Path.Combine(ImageFile, fileName);
+
+                // 确保目录存在
+                string directory = Path.GetDirectoryName(savePath);
+                if (!Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                using var image = SKImage.FromBitmap(bitmap);
+                using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+                using var stream = File.OpenWrite(savePath);
+                data.SaveTo(stream);
+                Console.WriteLine($"图像已保存: {savePath}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"保存图像失败 {fileName}: {ex.Message}");
+            }
+        }
+
+        // ========== 新增：放大倍数识别方法 ==========
+        private static SKBitmap TryDecodeWithMagnification(SKBitmap original, Func<BarcodeFormat, BarcodeReaderGeneric> createReader, float magnification,string ImageFile)
+        {
+            //var results = new List<DetectedObject>();
+            try
+            {
+                // 计算放大后的尺寸
+                int newWidth = (int)(original.Width * magnification);
+                int newHeight = (int)(original.Height * magnification);
+
+                // 使用高质量缩放
+                var magnifiedBitmap = original.Resize(new SKImageInfo(newWidth, newHeight), SKFilterQuality.High);
+
+                // 保存放大后的图像
+                SaveBitmapToFile(magnifiedBitmap, $"magnified_{magnification}x.png", ImageFile);
+
+                return magnifiedBitmap;
+                //// 尝试解码
+                //var luminanceSource = new SKBitmapLuminanceSource(magnifiedBitmap);
+                //var reader = createReader(BarcodeFormat.CODE_128);
+                //var decodeResults = reader.DecodeMultiple(luminanceSource);
+
+                //if (decodeResults != null)
+                //{
+                //    foreach (var result in decodeResults)
+                //    {
+                //        if (!string.IsNullOrEmpty(result.Text))
+                //        {
+                //            results.Add(new DetectedObject
+                //            {
+                //                Type = result.BarcodeFormat.ToString(),
+                //                Content = result.Text
+                //            });
+                //            Console.WriteLine($"放大{magnification}x解码：{result.BarcodeFormat} - {result.Text}");
+                //        }
+                //    }
+                //}
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"放大{magnification}x解码失败：{ex.Message}");
+                return null;
+            }
+        }
+
+
+
+        private static bool QuickDetectQRCode(SKBitmap bitmap)
+        {
+            try
+            {
+                // 1. 检查图像尺寸（太小或太大的图像可能没有二维码）
+                if (bitmap.Width < 50 || bitmap.Height < 50 || bitmap.Width > 5000 || bitmap.Height > 5000)
+                    return false;
+
+                // 2. 快速采样检查（检查几个关键区域是否有二维码特征）
+                var samplePoints = new[]
+                {
+                    new SKPointI(bitmap.Width / 4, bitmap.Height / 4),          // 左上1/4
+                    new SKPointI(bitmap.Width * 3 / 4, bitmap.Height / 4),      // 右上1/4
+                    new SKPointI(bitmap.Width / 4, bitmap.Height * 3 / 4),      // 左下1/4
+                    new SKPointI(bitmap.Width * 3 / 4, bitmap.Height * 3 / 4),  // 右下1/4
+                    new SKPointI(bitmap.Width / 2, bitmap.Height / 2)           // 中心
+                };
+
+                int qrFeatureCount = 0;
+                foreach (var point in samplePoints)
+                {
+                    if (point.X < bitmap.Width && point.Y < bitmap.Height)
+                    {
+                        var color = bitmap.GetPixel(point.X, point.Y);
+                        // 检查是否有高对比度区域（二维码特征）
+                        byte gray = (byte)(color.Red * 0.299 + color.Green * 0.587 + color.Blue * 0.114);
+                        if (gray < 50 || gray > 200) // 很暗或很亮的区域
+                            qrFeatureCount++;
+                    }
+                }
+
+                // 3. 如果有足够的高对比度区域，认为可能有二维码
+                return qrFeatureCount >= 3;
+            }
+            catch
+            {
+                // 如果快速检测失败，保守起见认为可能有二维码
+                return true;
+            }
+        }
+
+        //不预处理，直接读取
         private static List<DetectedObject> TryDecodeDirect(SKBitmap original, Func<BarcodeFormat, BarcodeReaderGeneric> createReader)
         {
             var results = new List<DetectedObject>();
@@ -1117,52 +1497,158 @@ namespace Test
             return results;
         }
 
-        // ========== 轻度预处理 ==========
-        private static List<DetectedObject> TryDecodeWithLightProcessing(SKBitmap original, Func<BarcodeFormat, BarcodeReaderGeneric> createReader)
+        //轻度预处理（适合清晰图像）
+        private static SKBitmap LightPreprocessImage(SKBitmap original, float scale = 1f)
         {
-            var results = new List<DetectedObject>();
+            if (original == null || original.Width == 0 || original.Height == 0)
+                return original.Copy();
 
             try
             {
-                // 轻度预处理：仅缩放和灰度化
-                using var processed = LightPreprocessImage(original, 1.2f);
-                var luminanceSource = new SKBitmapLuminanceSource(processed);
-                var reader = createReader(BarcodeFormat.QR_CODE);
-                var decodeResults = reader.DecodeMultiple(luminanceSource);
+                // 1. 缩放
+                int newWidth = (int)(original.Width * scale);
+                int newHeight = (int)(original.Height * scale);
+                using var scaled = original.Resize(new SKImageInfo(newWidth, newHeight), SKFilterQuality.Medium);
 
-                if (decodeResults != null)
+                // 2. 转灰度图
+                using var grayBitmap = new SKBitmap(newWidth, newHeight);
+                using (var canvas = new SKCanvas(grayBitmap))
                 {
-                    foreach (var result in decodeResults)
+                    using var paint = new SKPaint();
+                    paint.ColorFilter = SKColorFilter.CreateColorMatrix(new float[]
                     {
-                        if (!string.IsNullOrEmpty(result.Text))
-                        {
-                            results.Add(new DetectedObject
-                            {
-                                Type = result.BarcodeFormat.ToString(),
-                                Content = result.Text
-                            });
-                            Console.WriteLine($"轻度预处理解码：{result.BarcodeFormat} - {result.Text}");
-                        }
-                    }
+                       0.299f, 0.587f, 0.114f, 0, 0,
+                       0.299f, 0.587f, 0.114f, 0, 0,
+                       0.299f, 0.587f, 0.114f, 0, 0,
+                       0,      0,      0,      1, 0
+                    });
+                    canvas.DrawBitmap(scaled, 0, 0, paint);
                 }
+
+                // 3. 轻微高斯模糊（去噪）
+                using var blurredBitmap = new SKBitmap(newWidth, newHeight);
+                using (var canvas = new SKCanvas(blurredBitmap))
+                {
+                    using var paint = new SKPaint();
+                    paint.MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 0.5f); // 轻微模糊
+                    canvas.DrawBitmap(grayBitmap, 0, 0, paint);
+                }
+
+                return grayBitmap.Copy();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"轻度预处理解码失败：{ex.Message}");
+                Console.WriteLine($"轻度预处理失败：{ex.Message}");
+                return original.Copy();
+            }
+        }
+
+        // 重度预处理（适合模糊、低对比度图像）
+        private static SKBitmap BinarizeBitmap(SKBitmap src)
+        {
+            var dst = new SKBitmap(src.Info);
+
+            ReadOnlySpan<byte> srcPixels = src.GetPixelSpan();
+            Span<byte> dstPixels = dst.GetPixelSpan();
+
+            int pixelCount = srcPixels.Length / 4; // 每个像素 4 字节
+            int stride = src.Width * 4;
+
+            // 第一步：计算平均灰度（简化阈值）
+            long sum = 0;
+            for (int i = 0; i < pixelCount; i++)
+            {
+                int offset = i * 4;
+                byte b = srcPixels[offset + 0]; // B
+                byte g = srcPixels[offset + 1]; // G
+                byte r = srcPixels[offset + 2]; // R
+                byte a = srcPixels[offset + 3]; // A
+
+                byte gray = (byte)(0.299 * r + 0.587 * g + 0.114 * b);
+                sum += gray;
+            }
+            byte threshold = (byte)(sum / pixelCount);
+
+            // 第二步：二值化并写入目标
+            for (int i = 0; i < pixelCount; i++)
+            {
+                int offset = i * 4;
+                byte b = srcPixels[offset + 0];
+                byte g = srcPixels[offset + 1];
+                byte r = srcPixels[offset + 2];
+
+                byte gray = (byte)(0.299 * r + 0.587 * g + 0.114 * b);
+                byte bin = gray < threshold ? (byte)0 : (byte)255;
+
+                dstPixels[offset + 0] = bin; // B
+                dstPixels[offset + 1] = bin; // G
+                dstPixels[offset + 2] = bin; // R
+                dstPixels[offset + 3] = 255; // A
+            }
+
+            return dst;
+        }
+
+        //多参数轻度预处理
+        private static List<DetectedObject> TryDecodeWithMultiLightProcessing(SKBitmap original, Func<BarcodeFormat, BarcodeReaderGeneric> createReader,string ImageFile="")
+        {
+            var results = new List<DetectedObject>();
+            //var scales = new[] { 0.8f, 1.0f, 1.2f, 1.5f, 2.0f };
+            var scales = new[] {1.0f, 1.2f, 1.5f, 2.0f };
+
+            foreach (var scale in scales)
+            {
+                try
+                {
+                    using var processed = LightPreprocessImage(original, scale);
+
+                    SaveBitmapToFile(processed, scale+"Light.png", ImageFile);
+
+                    var luminanceSource = new SKBitmapLuminanceSource(processed);
+                    var reader = createReader(BarcodeFormat.CODE_128);
+                    var decodeResults = reader.DecodeMultiple(luminanceSource);
+
+                    if (decodeResults != null)
+                    {
+                        foreach (var result in decodeResults)
+                        {
+                            if (!string.IsNullOrEmpty(result.Text))
+                            {
+                                results.Add(new DetectedObject
+                                {
+                                    Type = result.BarcodeFormat.ToString(),
+                                    Content = result.Text
+                                });
+                                Console.WriteLine($"轻度预处理(缩放{scale})解码：{result.BarcodeFormat} - {result.Text}");
+                            }
+                        }
+
+                        if (results != null)
+                        {
+                            break;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"轻度预处理(缩放{scale})解码失败：{ex.Message}");
+                }
             }
 
             return results;
         }
 
-        // ========== 重度预处理 ==========
-        private static List<DetectedObject> TryDecodeWithHeavyProcessing(SKBitmap original, Func<BarcodeFormat, BarcodeReaderGeneric> createReader)
+        //重度预处理（使用高效二值化）
+        private static List<DetectedObject> TryDecodeWithHeavyProcessing(SKBitmap original, Func<BarcodeFormat, BarcodeReaderGeneric> createReader, string ImageFile = "")
         {
             var results = new List<DetectedObject>();
 
             try
             {
-                // 重度预处理：缩放+灰度+二值化
-                using var processed = HeavyPreprocessImage(original, 1.5f);
+                // 使用高效二值化方法
+                using var processed = BinarizeBitmap(original);
+                SaveBitmapToFile(processed, "Heavy.png", ImageFile);
+
                 var luminanceSource = new SKBitmapLuminanceSource(processed);
                 var reader = createReader(BarcodeFormat.QR_CODE);
                 var decodeResults = reader.DecodeMultiple(luminanceSource);
@@ -1191,19 +1677,36 @@ namespace Test
             return results;
         }
 
-        // ========== 多区域扫描 ==========
-        private static List<DetectedObject> TryDecodeMultipleRegions(SKBitmap original, Func<BarcodeFormat, BarcodeReaderGeneric> createReader)
+        // 多区域扫描
+        private static List<DetectedObject> TryDecodeMultipleRegionsEnhanced(SKBitmap original, Func<BarcodeFormat, BarcodeReaderGeneric> createReader)
         {
             var results = new List<DetectedObject>();
 
-            // 定义多个扫描区域
+            //// 定义更多扫描区域
+            //var regions = new[]
+            //{
+            //    //new SKRectI(0, 0, original.Width, original.Height), // 全图
+            //    new SKRectI(0, 0, original.Width / 2, original.Height), // 左半区
+            //    new SKRectI(original.Width / 2, 0, original.Width, original.Height), // 右半区
+            //    new SKRectI(0, 0, original.Width, original.Height / 2), // 上半区
+            //    new SKRectI(0, original.Height / 2, original.Width, original.Height), // 下半区
+            //    new SKRectI(original.Width / 4, original.Height / 4, original.Width * 3 / 4, original.Height * 3 / 4), // 中心区
+            //    new SKRectI(0, 0, original.Width / 3, original.Height), // 左1/3
+            //    new SKRectI(original.Width / 3, 0, original.Width * 2 / 3, original.Height), // 中1/3
+            //    new SKRectI(original.Width * 2 / 3, 0, original.Width, original.Height) // 右1/3
+            //};
+
+            int w = original.Width;
+            int h = original.Height;
+            int halfW = w / 2;
+            int halfH = h / 2;
+
             var regions = new[]
             {
-        new SKRectI(0, 0, original.Width, original.Height), // 全图
-        new SKRectI(0, 0, original.Width / 2, original.Height), // 左半区
-        new SKRectI(original.Width / 2, 0, original.Width, original.Height), // 右半区
-        new SKRectI(0, 0, original.Width, original.Height / 2), // 上半区
-        new SKRectI(0, original.Height / 2, original.Width, original.Height) // 下半区
+        new SKRectI(0,          0,          halfW,      halfH),       // 左上
+        new SKRectI(halfW,      0,          w,          halfH),       // 右上
+        new SKRectI(0,          halfH,      halfW,      h),           // 左下
+        new SKRectI(halfW,      halfH,      w,          h)            // 右下
     };
 
             foreach (var region in regions)
@@ -1213,97 +1716,115 @@ namespace Test
                     using var regionBitmap = new SKBitmap(region.Width, region.Height);
                     if (original.ExtractSubset(regionBitmap, region))
                     {
+                        // 对每个区域尝试多种预处理
                         var regionResults = TryDecodeDirect(regionBitmap, createReader);
                         results.AddRange(regionResults);
 
                         if (!regionResults.Any())
                         {
-                            regionResults = TryDecodeWithLightProcessing(regionBitmap, createReader);
+                            regionResults = TryDecodeWithMultiLightProcessing(regionBitmap, createReader);
+                            results.AddRange(regionResults);
+                        }
+
+                        if (!regionResults.Any())
+                        {
+                            regionResults = TryDecodeWithHeavyProcessing(regionBitmap, createReader);
                             results.AddRange(regionResults);
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"区域扫描失败：{ex.Message}");
+                    Console.WriteLine($"多区域失败：{ex.Message}");
                 }
             }
 
             return results.DistinctBy(x => x.Content).ToList();
         }
 
-        // ========== 改进的图像预处理方法 ==========
-        private static SKBitmap LightPreprocessImage(SKBitmap original, float scale = 1f)
+        //自适应
+        private static List<DetectedObject> TryDecodeWithAdaptiveParameters(SKBitmap original, Func<BarcodeFormat, BarcodeReaderGeneric> createReader)
         {
-            if (original == null || original.Width == 0 || original.Height == 0)
-                return original.Copy();
+            var results = new List<DetectedObject>();
 
-            try
+            // 根据图像尺寸自适应参数
+            var imageSize = original.Width * original.Height;
+            var isSmallImage = imageSize < 500 * 500;
+            var isLargeImage = imageSize > 2000 * 2000;
+
+            // 小图像：使用较大缩放比例
+            if (isSmallImage)
             {
-                // 1. 缩放
-                int newWidth = (int)(original.Width * scale);
-                int newHeight = (int)(original.Height * scale);
-                using var scaled = original.Resize(new SKImageInfo(newWidth, newHeight), SKFilterQuality.Medium);
-
-                // 2. 转灰度图
-                using var grayBitmap = new SKBitmap(newWidth, newHeight);
-                using (var canvas = new SKCanvas(grayBitmap))
+                var scales = new[] { 2.0f, 3.0f, 4.0f };
+                foreach (var scale in scales)
                 {
-                    using var paint = new SKPaint();
-                    paint.ColorFilter = SKColorFilter.CreateColorMatrix(new float[]
+                    try
                     {
-                0.299f, 0.587f, 0.114f, 0, 0,
-                0.299f, 0.587f, 0.114f, 0, 0,
-                0.299f, 0.587f, 0.114f, 0, 0,
-                0,      0,      0,      1, 0
-                    });
-                    canvas.DrawBitmap(scaled, 0, 0, paint);
-                }
+                        using var processed = LightPreprocessImage(original, scale);
+                        var luminanceSource = new SKBitmapLuminanceSource(processed);
+                        var reader = createReader(BarcodeFormat.QR_CODE);
+                        var decodeResults = reader.DecodeMultiple(luminanceSource);
 
-                return grayBitmap.Copy();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"轻度预处理失败：{ex.Message}");
-                return original.Copy();
-            }
-        }
-
-        private static SKBitmap HeavyPreprocessImage(SKBitmap original, float scale = 1f)
-        {
-            if (original == null || original.Width == 0 || original.Height == 0)
-                return original.Copy();
-
-            try
-            {
-                // 1. 轻度预处理
-                using var lightProcessed = LightPreprocessImage(original, scale);
-
-                // 2. 二值化（提高对比度）
-                using var binaryBitmap = new SKBitmap(lightProcessed.Width, lightProcessed.Height);
-
-                for (int y = 0; y < lightProcessed.Height; y++)
-                {
-                    for (int x = 0; x < lightProcessed.Width; x++)
+                        if (decodeResults != null)
+                        {
+                            foreach (var result in decodeResults)
+                            {
+                                if (!string.IsNullOrEmpty(result.Text))
+                                {
+                                    results.Add(new DetectedObject
+                                    {
+                                        Type = result.BarcodeFormat.ToString(),
+                                        Content = result.Text
+                                    });
+                                    Console.WriteLine($"自适应(小图缩放{scale})解码：{result.BarcodeFormat} - {result.Text}");
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
                     {
-                        var pixel = lightProcessed.GetPixel(x, y);
-                        // 计算灰度值
-                        byte gray = (byte)((pixel.Red * 0.299 + pixel.Green * 0.587 + pixel.Blue * 0.114));
-                        // 二值化阈值
-                        byte threshold = 128;
-                        byte binaryValue = gray > threshold ? (byte)255 : (byte)0;
-
-                        binaryBitmap.SetPixel(x, y, new SKColor(binaryValue, binaryValue, binaryValue));
+                        Console.WriteLine($"自适应(小图缩放{scale})解码失败：{ex.Message}");
                     }
                 }
+            }
 
-                return binaryBitmap.Copy();
-            }
-            catch (Exception ex)
+            // 大图像：使用较小缩放比例和更多区域扫描
+            if (isLargeImage)
             {
-                Console.WriteLine($"重度预处理失败：{ex.Message}");
-                return original.Copy();
+                var scales = new[] { 0.5f, 0.8f, 1.0f };
+                foreach (var scale in scales)
+                {
+                    try
+                    {
+                        using var processed = LightPreprocessImage(original, scale);
+                        var luminanceSource = new SKBitmapLuminanceSource(processed);
+                        var reader = createReader(BarcodeFormat.QR_CODE);
+                        var decodeResults = reader.DecodeMultiple(luminanceSource);
+
+                        if (decodeResults != null)
+                        {
+                            foreach (var result in decodeResults)
+                            {
+                                if (!string.IsNullOrEmpty(result.Text))
+                                {
+                                    results.Add(new DetectedObject
+                                    {
+                                        Type = result.BarcodeFormat.ToString(),
+                                        Content = result.Text
+                                    });
+                                    Console.WriteLine($"自适应(大图缩放{scale})解码：{result.BarcodeFormat} - {result.Text}");
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"自适应(大图缩放{scale})解码失败：{ex.Message}");
+                    }
+                }
             }
+
+            return results;
         }
 
         public class DetectedObject
@@ -1312,6 +1833,272 @@ namespace Test
             public string Content { get; set; }
             // 可补充：位置、置信度等字段
         }
+        #endregion
+
+        #region ChangeImages
+        public static void ChangeImages()
+        {
+            string RelativePath = "/FileStore/20251212/1.jpg";
+            string RelativePaths=RelativePath.Replace("/FileStore/", "");
+            string rootPath = @"C:\Users\liusi\Desktop\图片\FileStore\";
+            string relativeFolderPath = Path.GetDirectoryName(RelativePaths);
+            string fileName = Path.GetFileNameWithoutExtension(RelativePaths) + ".jpg";
+
+            //检查最后一个字符是否是路径分隔符
+            if (!rootPath.EndsWith(Path.DirectorySeparatorChar.ToString()) && !rootPath.EndsWith(Path.AltDirectorySeparatorChar.ToString()))
+            {
+                // 如果不是，补上路径分隔符
+                rootPath += Path.DirectorySeparatorChar;
+            }
+
+            string savedFilePath = SaveStreamToFileAsync(rootPath, relativeFolderPath, fileName, null);
+
+            if (System.IO.File.Exists(savedFilePath))
+            {
+                savedFilePath = savedFilePath.Replace('\\', '/');
+
+                string start = "/FileStore/";
+                int Index = savedFilePath.IndexOf(start, StringComparison.OrdinalIgnoreCase);
+
+                if (Index != -1)
+                {
+                    RelativePath = savedFilePath.Substring(Index);
+                }
+            }
+
+            Console.WriteLine(RelativePath);
+        }
+
+        /// <summary>
+        /// 保存流到系统目录（自动创建文件夹）
+        /// </summary>
+        private static string SaveStreamToFileAsync(string rootPath, string relativeFolderPath, string fileName, Stream fileStream)
+        {
+            string fullFolderPath = Path.GetFullPath(Path.Combine(rootPath, relativeFolderPath.TrimStart('\\', '/')));
+
+            if (!Directory.Exists(fullFolderPath))
+            {
+                Directory.CreateDirectory(fullFolderPath);
+            }
+
+            string fullFilePath = Path.Combine(fullFolderPath, fileName);
+
+            //if (fileStream.CanSeek)
+            //{
+            //    fileStream.Position = 0;
+            //}
+            //using (var outputStream = new FileStream(fullFilePath, FileMode.Create, FileAccess.Write, FileShare.None))
+            //{
+            //    fileStream.CopyTo(outputStream);
+            //}
+            return fullFilePath;
+        }
+        #endregion
+
+        #region OCRChange
+        public static void OCRChange()
+        {
+            #region 基礎數據
+            string Data = "ADO-REGTN-001-C-V04-20230305,ADO-REGTN-001-E-V04-20230305,ADO-REGTN-002-C-V05-20230305,ADO-REGTN-002-E-V05-20230305,ADO-DOCNT-003,ADO-DOCNT-004,AHS-PROGN-001-E-V01-20201120,AHS-DISSM-002-E-V01-20201120,AHS-PROGN-003-E-V01-20201120,AHS-REFRL-004-E-V01-20201120,AHS-PROGN-005,AHS-REFRL-006,AHS-REFRL-007-E-V02-20230120,AHS-REQUT-008-E-V02-20220909,AHS-APPSL-009-C-V01-20210702,AHS-APPSL-009-E-V01-20210702,AHS-APPSL-010-C-V01-20210702,AHS-APPSL-010-E-V01-20210702,ASC-ASSES-001-E-V01-20220414,ASC-REPRT-002-E-V01-20220414,ASC-REPRT-003-E-V01-20220414,ASC-REPRT-004-E-V01-20220414,ASC-REPRT-005-E-V01-20220414,ASC-REPRT-006-E-V01-20220414,ASC-REPRT-007-E-V01-20220414,ASC-ASSES-008-C-V02-20230111,ASC-ASSES-008-E-V02-20230111,ASC-ASSES-009-C-V02-20230111,ASC-ASSES-009-E-V02-20230111,ASC-REFRL-010-E-V01-20220704,ASC-REFRL-011-E-V01-20220704,ASC-REFRL-012-E-V01-20220704,ASC-REPRT-013,ASC-REPRT-014,ASC-REPRT-015,ASC-REPRT-016,ASC-REPRT-017,ASC-REPRT-018,ASC-ASSES-019-E-V03-20250205,ASC-CHKLT-020-E-V01-20220719,ASC-REFRL-021-E-V02-20221024,ASC-REPRT-022-E-V01-20221111,ASC-CONST-023-C-V02-20230322,ASC-CONST-023-E-V02-20230322,ASC-CONST-024-C-V02-20231229,ASC-CONST-024-E-V02-20231229,ASC-CONST-025-C-V05-20230808,ASC-CONST-025-E-V05-20230808,ASC-CONST-026-C-V02-20231206,ASC-CONST-026-E-V02-20231206,ASC-CONST-027-C-V02-20231229,ASC-CONST-027-E-V02-20231229,ASC-ASSES-028-B-V02-20230322,ASC-REQUT-029-C-V01-20220907,ASC-REQUT-029-E-V01-20220907,ASC-CONST-030-C-V02-20231206,ASC-CONST-030-E-V02-20231206,ASC-REPRT-031-E-V01-20221111,ASC-REPRT-032-E-V01-20221212,ASC-REPRT-033-E-V01-20221111,ASC-CONST-034-C-V03-20240619,ASC-CONST-034-E-V03-20240619,ASC-CONST-035-C-V02-20231229,ASC-CONST-035-E-V02-20231229,ASC-REPRT-036,ASC-REPRT-037,ASC-ASSES-038-B-V01-20230825,ASC-CONST-039-C-V01-20230904,ASC-CONST-039-E-V01-20230904,ASC-CONST-040-C-V01-20230904,ASC-CONST-040-E-V01-20230904,ASC-CONST-041-C-V01-20230904,ASC-CONST-041-E-V01-20230904,ASC-CONST-042-C-V01-20230904,ASC-CONST-042-E-V01-20230904,ASC-CONST-043-E-V01-20230904,ASC-CONST-044-E-V01-20230904,ASC-CONST-045-E-V01-20230904,ASC-CONST-046-E-V01-20230904,ASC-CONST-047-C-V03-20240619,ASC-CONST-047-E-V03-20240619,ASC-CONST-048-C-V01-20230927,ASC-CONST-048-E-V01-20230927,ASC-CONST-049-C-V01-20231026,ASC-CONST-049-E-V01-20231026,ASC-CONST-050-C-V01-20231026,ASC-CONST-050-E-V01-20231026,ASC-CONST-051-C-V01-20231026,ASC-CONST-051-E-V01-20231026,ASC-CHKLT-052-E-V01-20231117,ASC-REFRL-053-E-V01-20231122,ASC-CONST-054-C-V01-20231229,ASC-CONST-054-E-V01-20231229,ASC-CONST-055-C-V01-20231229,ASC-CONST-055-E-V01-20231229,ASC-CONST-056-C-V01-20240124,ASC-CONST-056-E-V01-20240124,ASC-CONST-057-C-V01-20240124,ASC-CONST-057-E-V01-20240124,ASC-CONST-058-C-V01-20240328,ASC-CONST-058-E-V01-20240328,ASC-CONST-059-C-V01-20240216,ASC-CONST-059-E-V01-20240216,ASC-CONST-060-C-V01-20240216,ASC-CONST-060-E-V01-20240216,ASC-CONST-061-C-V01-20240216,ASC-CONST-061-E-V01-20240216,ASC-CONST-062-C-V01-20240216,ASC-CONST-062-E-V01-20240216,ASC-CONST-063-C-V01-20240216,ASC-CONST-063-E-V01-20240216,ASC-CONST-064-C-V01-20240216,ASC-CONST-064-E-V01-20240216,ASC-CONST-065-C-V01-20240216,ASC-CONST-065-E-V01-20240216,ASC-CONST-066-C-V01-20240216,ASC-CONST-066-E-V01-20240216,ASC-REQUT-067-B-V01-20240730,ASC-REFRL-068-E-V01-20240829,ASC-MEDIC-069,ASC-CONST-070-C-V01-20251023,ASC-CONST-070-E-V01-20251023,ASC-CHARG-071,ASC-NURNT-072,CAD-REPRT-001,CAD-REPRT-002,CAD-REPRT-003,CAD-REPRT-004,CAD-REPRT-005,CAD-REPRT-006,CAD-CONST-007-C-V01-20241125,CAD-CONST-007-E-V01-20241125,CAD-CONST-008-C-V01-20241125,CAD-CONST-008-E-V01-20241125,CAD-CONST-009-C-V01-20241125,CAD-CONST-009-E-V01-20241125,CAD-CONST-010-C-V01-20241125,CAD-CONST-010-E-V01-20241125,CAD-CONST-011-C-V01-20241125,CAD-CONST-011-E-V01-20241125,CAD-CONST-012-C-V01-20241125,CAD-CONST-012-E-V01-20241125,CAD-REPRT-013,CAD-REPRT-014,CAD-REPRT-015,CAD-REPRT-016,CAD-REPRT-017,CUHKMC-DISSM-001-E-V01-20191120,CUHKMC-DISSM-002-E-V01-20191120,CUHKMC-ADMLE-003-E-V05-20231016,CUHKMC-ADMLE-003-E-V03-20231016,CUHKMC-CONSM-004-E-V01-20191120,CUHKMC-PROGN-005-E-V01-20191120,CUHKMC-SICKC-006-B-V01-20191120,CUHKMC-ATTEC-007-B-V01-20191120,CUHKMC-MEDIC-008-B-V01-20191120,CUHKMC-REFRL-009-E-V01-20191120,CUHKMC-REFRL-010-E-V01-20191120,CUHKMC-CONST-011-E-V01-20191218,CUHKMC-CONST-012-C-V01-20191218,CUHKMC-CONST-013-E-V01-20191218,CUHKMC-CONST-014-C-V01-20191218,CUHKMC-CONST-015-E-V01-20191218,CUHKMC-CONST-016-C-V01-20191218,CUHKMC-CONST-017-E-V03-20230914,CUHKMC-CONST-018-C-V02-20230914,CUHKMC-ADMNT-019-E-V01-20200106,CUHKMC-MEDIC-020-B-V01-20200206,CUHKMC-CONST-021-B-V02-20220404,CUHKMC-REGTN-022-B-V01-20200610,CUHKMC-REQUT-023-B-V01-20221202,CUHKMC-REQUT-024-B-V01-20221202,CUHKMC-CONST-025-E-V01-20210125,CUHKMC-CONST-026-C-V01-20210125,CUHKMC-CONST-027-E-V01-20200922,CUHKMC-CONST-028-C-V01-20200922,CUHKMC-CONST-029-C-V02-20230214,CUHKMC-CONST-029-E-V02-20230214,CUHKMC-CONST-030-C-V02-20250524,CUHKMC-CONST-030-E-V01-20250524,CUHKMC-CONST-031-B-V01-20210104,CUHKMC-CONST-032-B-V03-20250925,CUHKMC-CONST-033-B-V01-20210106,CUHKMC-CONST-034-B-V01-20210106,CUHKMC-REFRL-035-E-V01-20210111,CUHKMC-REFRL-036,CUHKMC-DOCNT-037,CUHKMC-REPRT-038,CUHKMC-CONST-039-C-V01-20210531,CUHKMC-CONST-039-E-V01-20210531,CUHKMC-REPRT-040-E-V01-20210201,CUHKMC-REGTN-041-B-V01-20210301,CUHKMC-REFRL-042-E-V01-20210308,CUHKMC-CONST-043-B-V01-20210310,CUHKMC-CONSM-044-E-V01-20210325,CUHKMC-ASSES-045-E-V03-20240209,CUHKMC-REFRL-046-E-V01-20210512,CUHKMC-CONST-047-B-V01-20210608,CUHKMC-SICKC-048-B-V01-20211021,CUHKMC-DISSM-049-E-V01-20211110,CUHKMC-DISSM-050-E-V01-20211110,CUHKMC-CONST-051-C-V01-20211206,CUHKMC-CONST-051-E-V01-20211206,CUHKMC-ADMLE-052-E-V02-20231016,CUHKMC-REFRL-053-E-V01-20220104,CUHKMC-CONSM-054-E-V01-20220222,CUHKMC-CONST-055-C-V01-20220307,CUHKMC-CONST-055-E-V01-20220307,CUHKMC-CONST-056-B-V01-20220310,CUHKMC-CONST-057-C-V01-20220316,CUHKMC-CONST-057-E-V01-20220316,CUHKMC-CHKLT-058-E-V02-20220322,CUHKMC-CONST-059-C-V01-20240312,CUHKMC-CONST-059-E-V02-20240312,CUHKMC-DISSM-060-E-V01-20220321,CUHKMC-CONST-061-C-V01-20220421,CUHKMC-CONST-061-E-V01-20220421,CUHKMC-CONST-062-B-V01-20221207,CUHKMC-CONST-063-E-V01-20221213,CUHKMC-REGTN-064-B-V01-20221229,CUHKMC-CONST-065-C-V01-20230105,CUHKMC-CONST-065-E-V01-20230105,CUHKMC-CONST-066-C-V02-20230515,CUHKMC-CONST-066-C-V02-20230515,CUHKMC-CONST-066-E-V01-20230515,CUHKMC-CONST-067-C-V01-20230110,CUHKMC-CONST-067-E-V01-20230110,CUHKMC-CONST-068-B-V01-20230111,CUHKMC-CONST-068-B-V01-20230111,CUHKMC-CONST-069-C-V01-20230524,CUHKMC-CONST-069-E-V01-20230524,CUHKMC-REFRL-070-E-V01-20230221,CUHKMC-CONST-071-B-V01-20230403,CUHKMC-CONST-072-C-V01-20230914,CUHKMC-CONST-072-E-V01-20230914,CUHKMC-DOCNT-073-C-V01-20230512,CUHKMC-DOCNT-073-E-V01-20230512,CUHKMC-CONST-074-C-V02-20231129,CUHKMC-CONST-074-E-V01-20231129,CUHKMC-DOCNT-075-E-V01-20230706,CUHKMC-REFRL-076-C-V01-20231025,CUHKMC-CONST-077-B-V01-20240105,CUHKMC-CONST-078-E-V01-20231221,CUHKMC-REPRT-079,CUHKMC-CONST-080-C-V01-20240614,CUHKMC-CONST-080-E-V01-20240614,CUHKMC-CONST-081-C-V01-20240726,CUHKMC-CONST-081-E-V01-20240726,CUHKMC-CONST-082-C-V01-20240801,CUHKMC-CONST-082-E-V01-20240801,CUHKMC-REFRL-083-B-V01-20240730,CUHKMC-REFRL-084-C-V01-20241025,CUHKMC-REFRL-085-E-V01-20250604,CUHKMC-ADMLE-086-E-V01-20251121,CUHKMC-ADMLE-087-E-V01-20251121,CUHKMC-ADMLE-088-E-V01-20251121,EDC-BRON-001-E-V01-20200313,EDC-CHOLG-002-E-V01-20200313,EDC-CHOLS-003-E-V01-20200313,EDC-COLO-004-E-V01-20210125,EDC-DUO-005-E-V01-20200313,EDC-EBUS-006-E-V01-20200313,EDC-ENTE-007-E-V01-20200313,EDC-ERCP-008-E-V01-20200313,EDC-EUS-009-E-V01-20200313,EDC-ESO-010-E-V01-20200313,EDC-OGD-011-E-V01-20210129,EDC-SIGM-012-E-V01-20200313,EDC-CHKLT-013-E-V01-20201130,EDC-REPRT-014-E-V01-20201130,EDC-ASSES-015-E-V01-20200928,EDC-DOCNT-016-E-V01-20201231,EDC-NASO-017-E-V01-20210225,EDC-CYSTO-018-E-V01-20210316,EDC-ADMLE-019-E-V01-20210422,EDC-CONST-020-C-V01-20210513,EDC-CONST-020-E-V01-20210513,EDC-CONST-021-C-V01-20210513,EDC-CONST-021-E-V01-20210513,EDC-CONST-022-C-V01-20210513,EDC-CONST-022-E-V01-20210513,EDC-CONST-023-C-V01-20210513,EDC-CONST-023-E-V01-20210513,EDC-CONST-024-C-V01-20210531,EDC-CONST-024-E-V01-20220928,EDC-ASSES-025-C-V01-20210617,EDC-ASSES-025-E-V01-20210617,EDC-REPRT-026-E-V01-20210816,EDC-REPRT-027-E-V01-20211004,EDC-REPRT-028-E-V01-20211008,EDC-ASSES-029-B-V02-20241025,EDC-CONST-030-C-V01-20211018,EDC-CONST-031-C-V01-20211021,EDC-CONST-031-E-V01-20211021,EDC-CONST-032-C-V01-20220315,EDC-CONST-032-E-V01-20220322,EDC-CONST-033-C-V01-20220721,EDC-CONST-033-E-V01-20220721,EDC-REPRT-034,EDC-CONST-035-C-V01-20220803,EDC-CONST-035-E-V01-20220803,EDC-CONST-036-C-V02-20250428,EDC-CONST-036-E-V02-20250428,EDC-CONST-037-C-V01-20250430,EDC-CONST-037-E-V01-20250430,EDC-CONST-038-C-V01-20250722,EDC-CONST-038-E-V01-20250722,ENT-REPRT-001,ENT-REPRT-002,EYC-OCT-001-E-V1-20200427,EYC-OCTA-002-E-V01-20200427,EYC-VF-003-E-V01-20200427,EYC-FP-004-E-V01-20210201,EYC-FF-005-E-V01-20200427,EYC-IOL-006-E-V01-20200427,EYC-VA-007-E-V01-20200427,EYC-AR-008-E-V01-20200427,EYC-TL-009-E-V01-20200427,EYC-NCT-010-E-V01-20200427,EYC-CCT-011-E-V01-20200427,EYC-SM-012-E-V01-20200427,EYC-ASCAN-013-E-V01-20200427,EYC-BSCAN-014-E-V01-20200427,EYC-SLP-015-E-V01-20200427,EYC-PACHY-016-E-V01-20200427,EYC-WP-017-E-V01-20200427,EYC-PANTA-018-E-V01-20200427,EYC-ST-019-E-V01-20200427,EYC-MT-020-E-V01-20220311,EYC-AK-021-E-V01-20200427,EYC-STERE-022-E-V01-20200427,EYC-COLT-023-E-V01-20200427,EYC-EXP-024-E-V01-20200427,EYC-AT-025-E-V01-20200427,EYC-CLF-026-E-V01-20200427,EYC-CNCT-027-E-V01-20200427,EYC-OSCAN-028-E-V01-20200427,EYC-NURNT-029,EYC-REQUT-030,EYC-REQUT-031,EYC-MEDAR-032,EYC-REQUT-033,EYC-NURNT-034,EYC-CHKLT-035,EYC-MEDAR-036,EYC-CHKLT-037,EYC-ASSES-038-B-V01-20210129,EYC-ASSES-039-E-V04-20230308,EYC-PRECN-040-B-V01-20210129,EYC-PRECN-041-B-V01-20210129,EYC-PROGN-042-E-V01-20210129,EYC-REPRT-043-E-V01-20210129,EYC-REPRT-044-E-V01-20210201,EYC-REPRT-045-E-V01-20210201,EYC-DOCNT-046-E-V01-20210201,EYC-DOCNT-047-E-V01-20210201,EYC-DOCNT-048-E-V01-20210201,EYC-DOCNT-049-E-V01-20210201,EYC-DOCNT-050-E-V01-20210201,EYC-DOCNT-051-E-V01-20210201,EYC-DOCNT-052-E-V01-20210201,EYC-ASSES-053-C-V01-20210217,EYC-ASSES-054-C-V01-20210217,EYC-ASSES-055-C-V01-20210217,EYC-CHKLT-056-E-V01-20210217,EYC-CHKLT-057-E-V01-20210217,EYC-ASSES-058-C-V01-20210217,EYC-CHKLT-059-E-V01-20210217,EYC-CHKLT-060-E-V01-20210217,EYC-CHKLT-061-E-V01-20210217,EYC-REFRL-062-E-V01-20210217,EYC-NURNT-063-E-V01-20210407,EYC-REQUT-064-E-V01-20210407,EYC-CHKLT-065-E-V01-20210407,EYC-CHKLT-066-E-V01-20210407,EYC-DOCNT-067-E-V01-20210407,EYC-DOCNT-068-E-V01-20210407,EYC-DOCNT-069-E-V01-20210407,EYC-DOCNT-070-E-V01-20210407,EYC-DOCNT-071-E-V01-20210407,EYC-DOCNT-072-E-V01-20210407,EYC-NURNT-073-E-V01-20210407,EYC-NURNT-074-B-V01-20210407,EYC-REPRT-075,EYC-REPRT-076,EYC-REPRT-077,FIN-CHARG-001-B-V01-20201126,FIN-CHARG-002-B-V01-20201126,FIN-CHARG-003-B-V08-20251002,FIN-CHARG-004-B-V01-20201229,FIN-CHARG-005-B-V01-20201229,FIN-CHARG-006-B-V01-20201229,FIN-CHARG-007-B-V01-20201229,FIN-CHARG-008-B-V01-20201229,FIN-CHARG-009-B-V01-20201229,FIN-CHARG-010,FIN-CHARG-011,HDC-PRECN-001-E-V02-20230104,HDC-NURNT-002-E-V03-20230328,HDC-ASSES-003-E-V01-20220720,HDC-CHKLT-004-E-V01-20220720,HDC-CHKLT-005-E-V01-20220720,HDC-REPRT-006,HDC-NURNT-007-E-V01-20240806,HDC-NURNT-008-E-V01-20240806,HIR-REQUT-001-B-V01-20200615,ICU-REPRT-001,ICU-ASSES-002,ICU-DOCNT-003,ICU-MEDAR-004,ICU-PROGN-005,ICU-DOCNT-006,ICU-CHART-007,ICU-ASSES-008,ICU-CHART-009,ICU-REPRT-010,ICU-CHKLT-011,ICU-ASSES-012,ICU-BRON-013,ICU-REPRT-014,ICU-CHART-015,ICU-NURNT-016,ICU-DOCNT-017,ICU-NURNT-018,ICU-CHART-019,ICU-CHART-020,ICU-CHKLT-021,ICU-CHART-022,ICU-CHART-023,ICU-DOCNT-024,ICU-DOCNT-025,ICU-DOCNT-026,ICU-DOCNT-027,ICU-DOCNT-028,ICU-DOCNT-029,ICU-DOCNT-030,ICU-DOCNT-031,ICU-DOCNT-032,ICU-DOCNT-033,ICU-DOCNT-034,ICU-DOCNT-035,ICU-DOCNT-036,ICU-DOCNT-037,ICU-DOCNT-038,ICU-DOCNT-039,ICU-DOCNT-040,ICU-DOCNT-041,ICU-DOCNT-042,ICU-DOCNT-043,ICU-DOCNT-044,ICU-DOCNT-045,ICU-DOCNT-046,ICU-DOCNT-047,ICU-DOCNT-048,ICU-DOCNT-049,ICU-DOCNT-050,ICU-PROGN-051,ICU-NURNT-052,ICU-NURNT-053,ICU-NURNT-054,ICU-NURNT-055,ICU-NURNT-056,ICU-NURNT-057,ICU-NURNT-058,ICU-NURNT-059,ICU-MEDAR-060,ICU-PROGN-061,ICU-PROGN-062,ICU-PROGN-063,ICU-PROGN-064,ICU-PROGN-065,ICU-PROGN-066,ICU-PROGN-067,ICU-ADM-068,ICU-CHART-069,ICU-CHKLT-070,ICU-CHKLT-071,ICU-REQUT-072-B-V01-20240620,IMC-CONSM-001,IMC-ATTEC-002,IMC-PRECN-003,IMC-PRECN-004,IMC-SICKC-005,IMC-CONST-006-B-V01-20231220,IMC-REGTN-007-C-V05-20251105,IMC-CONST-008-B-V01-20241010,MPS-PRECN-001-E-V01-20200422,MPS-REPRT-002-E-V01-20200622,MPS-REPRT-003-E-V01-20200622,MPS-REQUT-004-E-V01-20200622,MPS-REQUT-005-E-V01-20200622,MPS-PRECN-006,MPS-ASSES-007-E-V01-20210201,MPS-MEDAR-008-E-V01-20221007,MPS-MEDAR-009,MPS-CONST-010-C-V01-20241018,MPS-CONST-010-E-V01-20241018,MPS-MEDAR-011-E-V01-20250715,MPS-MEDAR-012-E-V01-20250715,MPS-MEDAR-013-E-V01-20250807,,,,,,NEU-REPRT-001,NEU-REPRT-002,NUR-APPS-001-B-V01-20191120,NUR-IMMR-002-E-V01-20191120,NUR-ALRG-003-E-V01-20200106,NUR-MEDAR-004-E-V01-20191203,NUR-MEDAR-004-E-V01-20210421,NUR-MEDAR-005-E-V01-20191203,NUR-CHART-006-E-V01-20191203,NUR-ASSES-007-E-V01-20191209,NUR-CHART-008-E-V01-20191210,NUR-NURCP-009-E-V01-20191210,NUR-ASSES-010-E-V01-20191210,NUR-ASSES-011-E-V01-20191210,NUR-ASSES-012-E-V01-20191210,NUR-ASSES-013-E-V01-20191210,NUR-ASSES-014-E-V02-20240520,NUR-ASSES-015-E-V01-20191210,NUR-ASSES-016-E-V01-20191210,NUR-ASSES-017-E-V01-20191210,NUR-ASSES-018-E-V01-20191210,NUR-ASSES-019-B-V03-20250415,NUR-ASSES-020-B-V01-20200117,NUR-ASSES-021-C-V01-20200120,NUR-ASSES-022-E-V01-20200220,NUR-ASSES-023-E-V01-20200317,NUR-CHKLT-024-E-V01-20200928,NUR-ASSES-025-E-V01-20200922,NUR-MEDAR-026-E-V03-20220307,NUR-CONST-027-B-V01-20201126,NUR-CONST-028-B-V01-20201126,NUR-ASSES-029-E-V01-20201126,NUR-CONST-030-B-V01-20230303,NUR-NURNT-031-E-V01-20201223,NUR-NURNT-032-E-V01-20201223,NUR-CHKLT-033-E-V01-20201223,NUR-REQUT-034-E-V02-20240607,NUR-NURNT-035-E-V01-20210127,NUR-CHKLT-036-E-V03-20250610,NUR-ASSES-037-E-V01-20210308,NUR-ASSES-038-E-V01-20210326,NUR-ASSES-039-E-V01-20210326,NUR-CHKLT-040-E-V01-20210326,NUR-CHKLT-041-E-V01-20210326,NUR-CHKLT-042-E-V01-20210326,NUR-CHKLT-043-E-V01-20210326,NUR-CHKLT-044-E-V01-20210326,NUR-CHKLT-045-E-V01-20210326,NUR-CHKLT-046-E-V01-20210326,NUR-CHART-047-E-V01-20210407,NUR-REQUT-048-B-V01-20210430,NUR-REQUT-049-E-V03-20251013,NUR-ASSES-050-E-V01-20210510,NUR-NURNT-051-E-V01-20210510,NUR-ASSES-052-E-V01-20210510,NUR-ASSES-053-E-V01-20210510,NUR-ASSES-054-E-V01-20210510,NUR-CHART-055-E-V02-20210615,NUR-CHART-056-E-V02-20210615,NUR-ALGRE-057-C-V01-20210526,NUR-ALGRE-057-E-V01-20210526,NUR-ALGRE-058-C-V01-20210526,NUR-ALGRE-058-E-V01-20210526,NUR-ASSES-059-C-V01-20210526,NUR-ASSES-059-E-V01-20210526,NUR-ASSES-060-C-V01-20210526,NUR-ASSES-060-E-V01-20210526,NUR-ASSES-061-E-V01-20210526,NUR-ASSES-062-E-V01-20210526,NUR-ASSES-063-E-V01-20210526,NUR-CHKLT-064-E-V01-20210526,NUR-REPRT-065-B-V03-20220628,NUR-ASSES-066-C-V01-20210526,NUR-ASSES-066-E-V01-20210526,NUR-ASSES-067-C-V01-20210526,NUR-ASSES-067-E-V01-20210526,NUR-ASSES-068-C-V01-20210526,NUR-ASSES-068-E-V01-20210526,NUR-ASSES-069-E-V01-20210526,NUR-CHKLT-070-B-V01-20210526,NUR-CHKLT-071-B-V01-20210526,NUR-ASSES-072-E-V01-20210531,NUR-ASSES-073-E-V01-20210531,NUR-ASSES-074-E-V01-20210602,NUR-ASSES-075-E-V01-20210602,NUR-ASSES-076-E-V01-20210602,NUR-ASSES-077-E-V01-20210602,NUR-ASSES-078-E-V01-20210602,NUR-ASSES-079-E-V01-20210602,NUR-ASSES-080-E-V01-20210602,NUR-ASSES-081-E-V01-20210602,NUR-CHKLT-082-C-V01-20210602,NUR-CHKLT-083-C-V01-20210602,NUR-REPRT-084-E-V01-20210608,NUR-REPRT-085-E-V01-20210608,NUR-REPRT-086-E-V01-20210608,NUR-REPRT-087-E-V01-20210608,NUR-ASSES-088-E-V01-20210610,NUR-NURNT-089-E-V01-20210610,NUR-REQUT-090-E-V01-20210610,NUR-CHART-091-E-V01-20210615,NUR-CHART-092-E-V01-20210615,NUR-CHART-093-E-V01-20210615,NUR-CHKLT-094-E-V01-20210621,NUR-ASSES-095-E-V01-20210621,NUR-CHKLT-096-E-V01-20210621,NUR-CHART-097-E-V01-20210621,NUR-NURNT-098-E-V01-20210623,NUR-ASSES-099-E-V01-20210625,NUR-ASSES-100-E-V01-20210629,NUR-ASSES-101-E-V01-20210707,NUR-ASSES-102-E-V01-20210707,NUR-ASSES-103-E-V01-20210707,NUR-CHART-104-E-V01-20210709,NUR-CHART-105-E-V01-20210709,NUR-CHART-106-E-V01-20210709,NUR-REPRT-107-B-V02-20220628,NUR-ASSES-108-E-V01-20210714,NUR-NURNT-109-E-V01-20210714,NUR-NURNT-110-E-V02-20220822,NUR-MEDAR-111-E-V01-20210714,NUR-NURNT-112-E-V01-20210714,NUR-NURNT-113-E-V01-20210714,NUR-NURNT-114-E-V02-20230222,NUR-ASSES-115-C-V02-20230703,NUR-ASSES-115-E-V02-20230703,NUR-NURNT-116-E-V02-20240403,NUR-NURNT-117-E-V03-20240423,NUR-ASSES-118-E-V01-20210831,NUR-NURNT-119-E-V04-20220604,NUR-NURNT-120-E-V01-20210913,NUR-CHART-121-E-V04-20240909,NUR-CHART-122-E-V01-20210913,NUR-ASSES-123-E-V01-20210913,NUR-CHART-124-E-V02-20250808,NUR-ASSES-125-E-V02-20240709,NUR-REQUT-126-E-V01-20210920,NUR-ASSES-127-E-V01-20210920,NUR-CHART-128-E-V02-20230222,NUR-ASSES-129-E-V01-20210920,NUR-NURNT-130-E-V01-20210920,NUR-CHKLT-131-E-V01-20210920,NUR-NURNT-132-E-V02-20230222,NUR-NURNT-133-E-V01-20210920,NUR-CHART-134-E-V01-20210920,NUR-CHART-135-E-V01-20210920,NUR-CHKLT-136-E-V01-20211021,NUR-REFRL-137-E-V01-20211021,NUR-ASSES-138-E-V01-20211021,NUR-NURNT-139-E-V02-20220604,NUR-ASSES-140-C-V02-20230316,NUR-ASSES-140-E-V02-20230329,NUR-CONST-141-C-V01-20211109,NUR-CONST-141-E-V01-20211109,NUR-CHKLT-142-C-V02-20220928,NUR-CHKLT-142-E-V02-20220928,NUR-CONST-143-B-V02-20220823,NUR-CONST-144-B-V01-20211109,NUR-ASSES-145-B-V01-20211213,NUR-NURNT-146-E-V01-20211213,NUR-CONST-147-B-V02-20220322,NUR-NURNT-148-E-V02-20250312,NUR-CHART-149-E-V01-20210920,NUR-CHART-150-E-V01-20220121,NUR-ASSES-151-B-V01-20220221,NUR-MEDAR-152-E-V01-20220322,NUR-MEDAR-153-E-V01-20220322,NUR-MEDAR-154-E-V01-20220322,NUR-MEDAR-155-E-V01-20220322,NUR-ASSES-156-E-V01-20220328,NUR-CHART-157-E-V01-20220425,NUR-ASSES-158-E-V01-20220425,NUR-CHART-159-E-V01-20220520,NUR-CHART-160-E-V01-20220706,NUR-ASSES-161-B-V01-20220607,NUR-CHART-162-E-V01-20220622,NUR-NURNT-163-E-V01-20220706,NUR-ASSES-164-C-V01-20220713,NUR-ASSES-164-E-V01-20220713,NUR-ASSES-165-C-V01-20220713,NUR-ASSES-165-E-V01-20220713,NUR-ASSES-166-C-V01-20220822,NUR-CONST-167-B-V01-20220916,NUR-ASSES-168-B-V01-20221024,NUR-ASSES-169-B-V01-20221024,NUR-ASSES-170-B-V01-20221024,NUR-NURNT-171-E-V01-20221024,NUR-NURNT-172-E-V02-20240612,NUR-MEDAR-173-E-V01-20230206,NUR-MEDAR-174-E-V01-20230203,NUR-MEDAR-175-E-V01-20230203,NUR-MEDAR-176-E-V01-20230203,NUR-NURNT-177-E-V02-20230529,NUR-ASSES-178-C-V01-20230927,NUR-CONST-179-C-V01-20231120,NUR-CONST-180-C-V01-20231120,NUR-CHKLT-181-E-V02-20240524,NUR-CHKLT-182-B-V01-20231219,NUR-ASSES-183-B-V01-20240126,NUR-ASSES-184-C-V01-20240126,NUR-ASSES-184-E-V01-20240126,NUR-ASSES-185-C-V01-20240126,NUR-ASSES-185-E-V01-20240126,NUR-ASSES-186-C-V01-20240205,NUR-ASSES-186-E-V01-20240205,NUR-CHKLT-187-E-V01-20240322,NUR-CHKLT-188-E-V01-20240322,NUR-ASSES-189-E-V01-20240403,NUR-NURNT-190-E-V01-20240614,NUR-ASSES-191-C-V01-20240815,NUR-ASSES-191-E-V01-20240815,NUR-CHKLT-192-E-V01-20240831,NUR-CHART-193-E-V01-20241224,NUR-CHART-194-E-V01-20250217,NUR-NURNT-195-E-V01-20250515,NUR-ASSES-196-E-V01-20250515,NUR-CHKLT-197-B-V01-20250515,NUR-CHART-198-E-V01-20250515,NUR-CHART-199-E-V01-20250515,NUR-DOCNT-200-E-V01-20250527,NUR-ASSES-201-C-V01-20250604,NUR-ASSES-201-E-V01-20250604,NUR-ASSES-202-C-V01-20250604,NUR-ASSES-202-E-V01-20250604,NUR-ASSES-203-C-V01-20250604,NUR-ASSES-203-E-V01-20250604,NUR-ASSES-204-C-V01-20250606,NUR-ASSES-204-E-V01-20250606,NUR-ASSES-205-C-V01-20250606,NUR-ASSES-205-E-V01-20250606,NUR-ASSES-206-E-V01-20250717,NUR-CHART-207-E-V01-20250717,NUR-NURNT-208-E-V01-20250717,NUR-NURNT-209-E-V01-20250717,NUR-CHART-210-E-V01-20250808,ONC-CONST-001-C-V01-20210607,ONC-CONST-001-E-V01-20210607,ONC-MEDAR-002-E-V03-20241212,ONC-MEDAR-003-E-V01-20210712,ONC-MEDAR-004-E-V02-20241212,ONC-MEDAR-005-E-V01-20210712,ONC-MEDAR-006-E-V02-20241212,ONC-MEDAR-007-E-V01-20210712,ONC-MEDAR-008-E-V01-20210712,ONC-MEDAR-009-E-V02-20241212,ONC-MEDAR-010-E-V02-20241212,ONC-MEDAR-011-E-V03-20241212,ONC-MEDAR-012-E-V02-20241212,ONC-MEDAR-013-E-V02-20250116,ONC-MEDAR-014-E-V01-20210712,ONC-MEDAR-015-E-V01-20210712,ONC-MEDAR-016-E-V01-20210712,ONC-MEDAR-017-E-V02-20250116,ONC-NURNT-018-E-V01-20210712,ONC-NURNT-019-E-V01-20210712,ONC-NURNT-020-E-V01-20210712,ONC-NURNT-021-E-V01-20210712,ONC-NURNT-022-E-V01-20210712,ONC-NURNT-023-E-V01-20210712,ONC-NURNT-024-E-V01-20210712,ONC-NURNT-025-E-V01-20210712,ONC-NURNT-026-E-V01-20210712,ONC-NURNT-027-E-V01-20210712,ONC-NURNT-028-E-V01-20210712,ONC-NURNT-029-E-V01-20210712,ONC-NURNT-030-E-V01-20210712,ONC-NURNT-031-E-V01-20210712,ONC-NURNT-032-E-V01-20210712,ONC-MEDAR-033-E-V02-20241122,ONC-MEDAR-034-E-V02-20250116,ONC-MEDAR-035-E-V01-20210712,ONC-NURNT-036-E-V01-20210712,ONC-NURNT-037-E-V01-20210712,ONC-MEDAR-038-E-V02-20250116,ONC-NURNT-039-E-V01-20210712,ONC-MEDAR-040-E-V02-20250116,ONC-MEDAR-041-E-V01-20210805,ONC-MEDAR-042-E-V02-20250116,ONC-MEDAR-043-E-V01-20210805,ONC-MEDAR-044-E-V02-20250116,ONC-MEDAR-045-E-V02-20250116,ONC-MEDAR-046-E-V02-20250212,ONC-MEDAR-047-E-V03-20250212,ONC-MEDAR-048-E-V02-20250210,ONC-MEDAR-049-E-V01-20210805,ONC-MEDAR-050-E-V01-20210805,ONC-NURNT-051-E-V01-20210805,ONC-NURNT-052-E-V01-20210805,ONC-NURNT-053-E-V01-20210805,ONC-NURNT-054-E-V01-20210805,ONC-NURNT-055-E-V01-20210805,ONC-NURNT-056-E-V01-20210805,ONC-NURNT-057-E-V01-20210805,ONC-NURNT-058-E-V01-20210805,ONC-NURNT-059-E-V01-20210805,ONC-MEDAR-060-E-V02-20250602,ONC-MEDAR-061-E-V03-20250901,ONC-MEDAR-062-E-V03-20250901,ONC-MEDAR-063-E-V03-20250526,ONC-MEDAR-064-E-V02-20250212,ONC-MEDAR-065-E-V02-20241122,ONC-MEDAR-066-E-V01-20210916,ONC-NURNT-067-E-V01-20210916,ONC-NURNT-068-E-V01-20210916,ONC-NURNT-069-E-V01-20210916,ONC-NURNT-070-E-V01-20210916,ONC-MEDAR-071-E-V02-20241122,ONC-NURNT-072-E-V01-20211015,ONC-MEDAR-073-E-V01-20211025,ONC-MEDAR-074-E-V01-20211025,ONC-MEDAR-075-E-V02-20250212,ONC-MEDAR-076-E-V02-20250602,ONC-MEDAR-077-E-V02-20250602,ONC-MEDAR-078-E-V01-20211025,ONC-MEDAR-079-E-V02-20250320,ONC-MEDAR-080-E-V02-20250415,ONC-NURNT-081-E-V01-20211025,ONC-NURNT-082-E-V01-20211025,ONC-NURNT-083-E-V01-20211025,ONC-NURNT-084-E-V01-20211025,ONC-NURNT-085-E-V01-20211025,ONC-NURNT-086-E-V01-20211025,ONC-NURNT-087-E-V01-20211025,ONC-MEDAR-088-E-V02-20250602,ONC-MEDAR-089-E-V02-20250526,ONC-MEDAR-090-E-V01-20220125,ONC-MEDAR-091-E-V02-20230911,ONC-MEDAR-092-E-V01-20220125,ONC-MEDAR-093-E-V02-20250526,ONC-MEDAR-094-E-V02-20250328,ONC-MEDAR-095-E-V01-20220125,ONC-MEDAR-096-E-V02-20230908,ONC-MEDAR-097-E-V02-20230908,ONC-MEDAR-098-E-V02-20230908,ONC-NURNT-099-E-V01-20220125,ONC-NURNT-100-E-V01-20220125,ONC-NURNT-101-E-V01-20220125,ONC-NURNT-102-E-V01-20220125,ONC-NURNT-103-E-V01-20220125,ONC-NURNT-104-E-V01-20220125,ONC-NURNT-105-E-V01-20220125,ONC-NURNT-106-E-V01-20220125,ONC-NURNT-107-E-V01-20220125,ONC-NURNT-108-E-V01-20220125,ONC-NURNT-109-E-V01-20220125,ONC-NURNT-110-E-V01-20220126,ONC-MEDAR-111-E-V01-20220302,ONC-NURNT-112-E-V01-20220302,ONC-MEDAR-113-E-V01-20220310,ONC-NURNT-114-E-V01-20220310,ONC-MEDAR-115-E-V02-20250602,ONC-MEDAR-116-E-V02-20250602,ONC-MEDAR-117-E-V02-20250602,ONC-MEDAR-118-E-V02-20250328,ONC-MEDAR-119-E-V02-20241122,ONC-MEDAR-120-E-V02-20250212,ONC-MEDAR-121-E-V02-20241122,ONC-MEDAR-122-E-V02-20250328,ONC-MEDAR-123-E-V01-20220328,ONC-MEDAR-124-E-V03-20250328,ONC-MEDAR-125-E-V01-20220328,ONC-MEDAR-126-E-V02-20250320,ONC-NURNT-127-E-V01-20220328,ONC-NURNT-128-E-V01-20220328,ONC-NURNT-129-E-V01-20220328,ONC-NURNT-130-E-V01-20220328,ONC-NURNT-131-E-V01-20220328,ONC-NURNT-132-E-V01-20220328,ONC-NURNT-133-E-V01-20220328,ONC-NURNT-134-E-V01-20220328,ONC-NURNT-135-E-V01-20220328,ONC-NURNT-136-E-V01-20220328,ONC-NURNT-137-E-V01-20220328,ONC-MEDAR-138-E-V01-20220408,ONC-NURNT-139-E-V01-20220408,ONC-MEDAR-140-E-V02-20250328,ONC-NURNT-141-E-V01-20220506,ONC-MEDAR-142-E-V01-20220617,ONC-NURNT-143-E-V01-20220617,ONC-MEDAR-144-E-V01-20220624,ONC-NURNT-145-E-V01-20220624,ONC-MEDAR-146-E-V01-20220624,ONC-NURNT-147-E-V01-20220624,ONC-MEDAR-148-E-V02-20250320,ONC-NURNT-149-E-V01-20220624,ONC-MEDAR-150-E-V02-20250901,ONC-NURNT-151-E-V01-20220624,ONC-MEDAR-152-E-V02-20250320,ONC-NURNT-153-E-V01-20220811,ONC-MEDAR-154-E-V01-20220919,ONC-NURNT-155-E-V01-20220919,ONC-MEDAR-156-E-V01-20221220,ONC-MEDAR-157-E-V01-20221220,ONC-MEDAR-158-E-V01-20230131,ONC-MEDAR-159-E-V01-20230131,ONC-NURNT-160-E-V01-20230131,ONC-MEDAR-161-E-V01-20230309,ONC-NURNT-162-E-V01-20230309,ONC-MEDAR-163-E-V01-20230309,ONC-NURNT-164-E-V01-20230309,ONC-MEDAR-165-E-V01-20230309,ONC-NURNT-166-E-V01-20230309,ONC-MEDAR-167-E-V01-20230309,ONC-NURNT-168-E-V01-20230309,ONC-MEDAR-169-E-V02-20250526,ONC-NURNT-170-E-V01-20230511,ONC-MEDAR-171-E-V01-20230511,ONC-NURNT-172-E-V01-20230511,ONC-MEDAR-173-E-V01-20230515,ONC-NURNT-174-E-V01-20230515,ONC-MEDAR-175-E-V03-20250415,ONC-NURNT-176-E-V01-20230607,ONC-MEDAR-177-E-V02-20250415,ONC-NURNT-178-E-V01-20230607,ONC-MEDAR-179-E-V01-20230718,ONC-NURNT-180-E-V01-20230718,ONC-MEDAR-181-E-V01-20230718,ONC-NURNT-182-E-V01-20230718,ONC-MEDAR-183-E-V01-20230729,ONC-NURNT-184-E-V01-20230729,ONC-MEDAR-185-E-V01-20230729,ONC-MEDAR-186-E-V02-20250320,ONC-NURNT-187-E-V01-20230729,ONC-MEDAR-188-E-V01-20230824,ONC-NURNT-189-E-V01-20230824,ONC-MEDAR-190-E-V01-20230824,ONC-NURNT-191-E-V01-20230824,ONC-MEDAR-192-E-V02-20250415,ONC-NURNT-193-E-V01-20230912,ONC-MEDAR-194-E-V01-20240131,ONC-NURNT-195-E-V01-20240131,ONC-MEDAR-196-E-V02-20250212,ONC-NURNT-197-E-V01-20240209,ONC-MEDAR-198-E-V01-20240209,ONC-NURNT-199-E-V01-20240209,ONC-MEDAR-200-E-V01-20240209,ONC-NURNT-201-E-V01-20240209,ONC-MEDAR-202-E-V02-20250328,ONC-NURNT-203-E-V01-20240311,ONC-MEDAR-204-E-V01-20240408,ONC-MEDAR-205-E-V01-20240408,ONC-MEDAR-206-E-V01-20240516,ONC-NURNT-207-E-V01-20240516,ONC-MEDAR-208-E-V01-20240618,ONC-NURNT-209-E-V01-20240618,ONC-MEDAR-210-E-V01-20240618,ONC-NURNT-211-E-V01-20240618,ONC-MEDAR-212-E-V01-20240802,ONC-NURNT-213-E-V01-20240802,ONC-MEDAR-214-E-V01-20241009,ONC-MEDAR-215-E-V01-20241020,ONC-MEDAR-216-E-V01-20241020,ONC-MEDAR-217-E-V01-20241110,ONC-NURNT-218-E-V01-20241110,ONC-MEDAR-219-E-V01-20241205,ONC-NURNT-220-E-V01-20241205,ONC-NURNT-221-E-V01-20241205,ONC-MEDAR-222-E-V01-20241213,ONC-NURNT-223-E-V01-20241213,ONC-MEDAR-224-E-V01-20241205,ONC-NURNT-225-E-V01-20241205,ONC-MEDAR-226-E-V01-20250305,ONC-NURNT-227-E-V01-20250305,ONC-MEDAR-228-E-V01-20250415,ONC-NURNT-229-E-V01-20250415,ONC-MEDAR-230-E-V01-20250415,ONC-NURNT-231-E-V01-20250415,ONC-MEDAR-232-E-V01-20250415,ONC-NURNT-233-E-V01-20250415,ONC-MEDAR-234-E-V01-20250523,ONC-MEDAR-235-E-V01-20250523,ONC-MEDAR-236-E-V01-20250523,ONC-NURNT-237-E-V01-20250523,ONC-MEDAR-238-E-V01-20250526,ONC-NURNT-239-E-V01-20250526,ONC-MEDAR-240-E-V01-20250530,ONC-NURNT-241-E-V01-20250530,ONC-MEDAR-242-E-V01-20250609,ONC-NURNT-243-E-V01-20250609,ONC-MEDAR-244-E-V01-20250611,ONC-NURNT-245-E-V01-20250611,ONC-MEDAR-246-E-V01-20250615,ONC-NURNT-247-E-V01-20250615,ONC-MEDAR-248-E-V01-20250618,ONC-NURNT-249-E-V01-20250618,ONC-MEDAR-250-E-V01-20250629,ONC-NURNT-251-E-V01-20250629,ONC-MEDAR-252-E-V01-20250629,ONC-NURNT-253-E-V01-20250629,ONC-MEDAR-254-E-V01-20250629,ONC-NURNT-255-E-V01-20250629,ONC-MEDAR-256-E-V01-20250709,ONC-NURNT-257-E-V01-20250709,ONC-MEDAR-258-E-V01-20250720,ONC-MEDAR-259-E-V01-20250720,ONC-MEDAR-260-E-V01-20250720,ONC-MEDAR-261-E-V01-20250720,ONC-MEDAR-262-E-V01-20250720,ONC-NURNT-263-E-V01-20250720,ONC-NURNT-264-E-V01-20250720,ONC-NURNT-265-E-V01-20250720,ONC-NURNT-266-E-V01-20250720,ONC-MEDAR-267-E-V01-20250801,ONC-NURNT-268-E-V01-20250801,ONC-MEDAR-269-E-V01-20250806,ONC-NURNT-270-E-V01-20250806,ONC-MEDAR-271-E-V01-20250806,ONC-MEDAR-272-E-V01-20250806,ONC-NURNT-273-E-V01-20250806,ONC-NURNT-274-E-V01-20250806,ONC-MEDAR-275-E-V01-20250901,ONC-NURNT-276-E-V01-20250901,ONC-MEDAR-277-E-V01-20251017,ONC-NURNT-278-E-V01-20251017,ONG-REPRT-001,ONG-REPRT-002,ONG-CHKLT-003-E-V01-20220120,ONG-CHKLT-004-E-V04-20230527,ONG-CHKLT-005-E-V03-20240617,OPH-REPRT-001,OPH-REPRT-002,OPT-DOCNT-001-E-V01-20191203,OPT-REPRT-002-E-V01-20191203,OPT-CHKLT-003-E-V01-20200908,OPT-DOCNT-004-E-V02-20210112,OPT-ASSES-005-E-V01-20200908,OPT-CHKLT-006-E-V01-20200622,OPT-NURNT-007-E-V01-20200924,OPT-DOCNT-008,OPT-DOCNT-009,OPT-REQUT-011-E-V02-20210705,OPT-DOCNT-012-E-V01-20210928,OPT-REQUT-013-E-V01-20220809,OPT-CHARG-014,PAE-REPRT-001,PAE-REPRT-002,PAT-NURNT-001-E-V01-20210209,PAT-NURNT-002-E-V01-20210209,PAT-CPS-003-E-V01-20200312,PAT-BBS-004-E-V01-20200312,PAT-CL-005-E-V01-20200312,PAT-CYTO-006-E-V01-20200312,PAT-HMS-007-E-V01-20200312,PAT-ACP-008-E-V01-20200312,PAT-IMS-009-E-V01-20200312,PAT-MBS-010-E-V01-20200312,PAT-MOL-011-E-V01-20200312,PAT-OUT-012-E-V01-20200312,PAT-VRS-013-E-V01-20200312,PAT-NURNT-014-E-V02-20231103,PAT-REQUT-015-E-V01-20200622,PAT-REQUT-016-E-V03-20251119,PAT-REQUT-017-E-V01-20200826,PAT-REQUT-018-E-V01-20200826,PAT-REQUT-019-E-V03-20221101,PAT-REQUT-020-E-V03-20250623,PAT-REQUT-021-E-V02-20221101,PAT-REQUT-022-E-V01-20200826,PAT-REQUT-023-E-V01-20200826,PAT-REQUT-024-E-V01-20210209,PAT-REPRT-025,PAT-REPRT-026,PAT-REQUT-027,PAT-REQUT-028-E-V01-20210209,PAT-REQUT-029-E-V02-20250623,PAT-REQUT-030-E-V01-20211208,PAT-REQUT-031-E-V02-20220217,PAT-REQUT-032-E-V01-20221101,REM-REPRT-001,REM-REPRT-002,RTC-CONST-001-E-V01-20210216,RTC-CONST-002-C-V01-20210216,RTC-REQUT-003-E-V05-20241217,RTC-REPRT-004-E-V01-20210812,RTC-REPRT-005-E-V01-20210812,RTC-CONST-006-C-V01-20220314,RTC-CONST-006-E-V01-20220314,RTC-REPRT-007-E-V01-20220819,RTC-CHKLT-008-B-V01-20250116,RTC-CONST-009-C-V01-20250116,RTC-CONST-009-E-V01-20250116,URO-REPRT-001,URO-REPRT-002,WEC-ASSES-001-B-V03-20230530,XRC-ADM-001-E-V01-20200312,XRC-DXA-002-E-V01-20200312,XRC-CAT-003-E-V01-20200312,XRC-DDR-004-E-V01-20200312,XRC-FXR-005-E-V01-20200312,XRC-IIR-006-E-V01-20200312,XRC-MRI-007-E-V01-20200312,XRC-MMG-008-E-V01-20200312,XRC-MIS-009-E-V01-20200312,XRC-NUR-010-E-V01-20200312,XRC-OXR-011-E-V01-20200312,XRC-PET-012-E-V01-20200312,XRC-RNI-013-E-V01-20200312,XRC-USG-014-E-V01-20200312,XRC-REQUT-015-E-V01-20201124,XRC-ASSES-016-B-V01-20201124,XRC-ASSES-017-E-V01-20201124,XRC-CHKLT-018-E-V01-20201124,XRC-ASSES-019-B-V01-20201124,XRC-NURNT-020-E-V01-20201124,XRC-NURNT-021-E-V01-20201124,XRC-CHARG-022-E-V01-20201124,XRC-CHKLT-023-E-V01-20201230,XRC-CHKLT-024-C-V01-20201230,XRC-REPRT-025,XRC-REPRT-026,XRC-REQUT-027,XRC-CHKLT-028-E-V01-20210803,XRC-DOCNT-029-E-V01-20210803,XRC-DOCNT-030-E-V01-20210803,XRC-CHKLT-031-E-V01-20210803,XRC-NURNT-032-E-V01-20210823,XRC-REQUT-033-E-V01-20210823,XRC-DOCNT-034-E-V01-20210823,XRC-DOCNT-035-E-V01-20210823,XRC-CONST-036-C-V01-20211021,XRC-CONST-036-E-V01-20211021,XRC-CONST-037-E-V01-20211021,XRC-CONST-037-E-V01-20211021,XRC-NURNT-038-E-V01-20211222,XRC-NURNT-039-E-V01-20211222,XRC-REQUT-040-E-V01-20220204,XRC-REQUT-041-E-V01-20220204,XRC-REQUT-042-E-V01-20220204,XRC-REQUT-043-E-V01-20220204,XRC-REQUT-044-E-V01-20220204,XRC-REQUT-045-E-V02-20251013,XRC-REQUT-046-E-V01-20220204,XRC-REQUT-047-E-V01-20220204,XRC-CONST-048-C-V01-20220224,XRC-CONST-048-E-V01-20220224,XRC-REQUT-049-E-V01-20220328,XRC-CHKLT-050-B-V01-20220607,XRC-CHKLT-051-B-V03-20230605,XRC-DOCNT-052,XRC-DOCNT-053-E-V04-20240726,XRC-MEDAR-054-E-V01-20220726,XRC-NURNT-055-E-V02-20230919,XRC-CHKLT-056-E-V01-20220728,XRC-DOCNT-057-E-V02-20240726,XRC-DOCNT-058-E-V02-20240726";
+            #endregion
+
+            //var Datas = Data.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+            //List<string> FormIds = new List<string>();
+
+            //List<string> one = new List<string>();
+            //List<string> two = new List<string>();
+            //List<string> three = new List<string>();
+
+            //foreach (var item in Datas)
+            //{
+            //    var parts = item.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            //    if (parts.Length >= 3)
+            //    {
+            //        // 处理第一部分（纯字母）：修复OCR错误
+            //        //string part1 = CleanAlphabeticPart(parts[0]);
+
+            //        //// 处理第二部分（纯字母）：修复OCR错误
+            //        //string part2 = CleanAlphabeticPart(parts[1]);
+
+            //        //// 处理第三部分（纯数字）：只保留数字
+            //        //string part3 = CleanNumericPart(parts[2]);
+
+            //        // 验证各部分格式
+            //        if (IsValidAlphabetic(parts[0]) && IsValidAlphabetic(parts[1]) && IsValidNumeric(parts[2]))
+            //        {
+            //            string FormId = $"{parts[0]}-{parts[1]}-{parts[2]}";
+            //            FormIds.Add(FormId);
+            //            one.Add(parts[0]);
+            //            two.Add(parts[1]);
+            //            three.Add(parts[2]);
+            //        }
+            //        else
+            //        {
+            //            Console.WriteLine("No");
+            //        }
+            //    }
+            //    else
+            //    {
+            //        Console.WriteLine("No3");
+            //    }
+            //}
+
+            //// 去重处理
+            //FormIds = FormIds.DistinctBy(x => x)
+            //        .ToList();
+            //one = one.DistinctBy(x => x)
+            //       .ToList();
+            //two = two.DistinctBy(x => x)
+            //      .ToList();
+            //three = three.DistinctBy(x => x)
+            //      .ToList();
+
+            //foreach (var item in FormIds)
+            //{
+            //    Console.WriteLine(item);
+            //}
+            //Console.WriteLine("----------------------------------------------------------------");
+
+            //foreach (var item in one)
+            //{
+            //    Console.WriteLine(item);
+            //}
+            //Console.WriteLine("----------------------------------------------------------------");
+            //foreach (var item in two)
+            //{
+            //    Console.WriteLine(item);
+            //}
+            //Console.WriteLine("----------------------------------------------------------------");
+            //foreach (var item in three)
+            //{
+            //    Console.WriteLine(item);
+            //}
+            //Console.WriteLine("----------------------------------------------------------------");
+
+            // 测试各种OCR识别结果
+            var testCases = new[]
+            {
+                "0NC-MEDAR-261",    // 0被识别为O
+                "NUR-ASSES-2O6",    // 0被识别为O
+                "CUHKMC-C0NST-065", // 0被识别为O
+                "CAD-REPRT-0I4",    // 1被识别为I
+                "XRC-1NFST-039",     // I被识别为1
+                "FIN-CHARG-0N3",
+                "NIIR-CHARG-0N3",
+                "NLIR-CHARG-0N3",
+                "NLLR-CHARG-0N3"
+            };
+
+            foreach (var testCase in testCases)
+            {
+                //var result = FormIdValidator.ValidateAndNormalizeFormId(testCase);
+                var result = GetFormIDWithoutVersionNumber(testCase);
+                Console.WriteLine($"{testCase} -> {result}");
+            }
+        }
+
+        public static string GetFormIDWithoutVersionNumber(string formId)
+        {
+            if (string.IsNullOrWhiteSpace(formId))
+                return string.Empty;
+
+            // 1. 转换为大写，统一格式
+            formId = formId.ToUpperInvariant().Trim();
+
+            // 2. 修复OCR常见错误（只针对前两部分）
+            var parts = formId.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 3)
+            {
+                // 处理第一部分（纯字母）：修复OCR错误
+                string part1 = CleanAlphabeticPart(parts[0]);
+
+                // 处理第二部分（纯字母）：修复OCR错误
+                string part2 = CleanAlphabeticPart(parts[1]);
+
+                // 处理第三部分（纯数字）：只保留数字
+                string part3 = CleanNumericPart(parts[2]);
+
+                // 验证各部分格式
+                if (IsValidAlphabetic(part1) && IsValidAlphabetic(part2) && IsValidNumeric(part3))
+                {
+                    return $"{part1}-{part2}-{part3}";
+                }
+            }
+
+            return string.Empty;
+        }
+
+        // 清理字母部分（只保留字母，修复OCR错误）
+        private static string CleanAlphabeticPart(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return string.Empty;
+
+            // OCR常见错误映射（字母部分）// 扩展映射
+            var ocrCorrections = new Dictionary<char, char>
+            {
+                 {'0', 'O'}, {'1', 'I'}, {'5', 'S'}, {'8', 'B'},
+                 {'2', 'Z'}, {'6', 'G'}, {'9', 'Q'}, {'7', 'T'}, 
+                 {'4', 'A'} // 4可能被识别为A
+            };
+
+            // 应用OCR修正
+            foreach (var correction in ocrCorrections)
+            {
+                text = text.Replace(correction.Key, correction.Value);
+            }
+
+            //特殊處理
+            if (text== "NIIR" || text == "NLIR" || text == "NLLR")
+            {
+                text = "NUR";
+            }
+
+            // 只保留字母
+            return new string(text.Where(char.IsLetter).ToArray());
+        }
+
+        // 清理数字部分（只保留数字）
+        private static string CleanNumericPart(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return string.Empty;
+
+            // 数字部分常见OCR错误修正// 扩展映射
+            var corrections = new Dictionary<char, char>
+            {
+                 { 'O', '0' },{ 'N', '0' },
+                 { 'I', '1' },{ 'L', '1' },
+                 { 'S', '5' },
+                 { 'B', '8' },
+                 { 'G', '6' },
+                 { 'Z', '2' },
+                 { 'Q', '9' }, { 'T', '7'},
+                 { 'A', '4' } // A可能被识别为4
+            };
+
+            foreach (var correction in corrections)
+            {
+                text = text.Replace(correction.Key, correction.Value);
+            }
+
+            // 只保留数字
+            return new string(text.Where(char.IsDigit).ToArray());
+        }
+
+        // 验证是否为有效字母部分
+        private static bool IsValidAlphabetic(string text)
+        {
+            return !string.IsNullOrEmpty(text) && text.All(char.IsLetter);
+        }
+
+        // 验证是否为有效数字部分
+        private static bool IsValidNumeric(string text)
+        {
+            return !string.IsNullOrEmpty(text) && text.All(char.IsDigit);
+        }
+
         #endregion
     }
 }
