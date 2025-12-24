@@ -7,10 +7,14 @@ using System.Diagnostics.Metrics;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using ZXing;
 using ZXing.Common;
 using ZXing.SkiaSharp;
 using static Test.Program;
+using System.Text.Json;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp;
 
 namespace Test
 {
@@ -20,7 +24,9 @@ namespace Test
         {
             //Zxing();
             //ChangeImages();
-            OCRChange();
+            //OCRChange();
+
+            OCRImage();
             Console.WriteLine();
             Console.ReadKey();
 
@@ -868,7 +874,7 @@ namespace Test
             // 循环识别每个图片文件
             for (int i = 0; i < imageFiles.Count; i++)
             {
-                DateTime starttime= DateTime.Now;
+                DateTime starttime = DateTime.Now;
                 string imagePath = imageFiles[i];
                 string fileName = Path.GetFileName(imagePath);
 
@@ -904,7 +910,7 @@ namespace Test
                     //Console.WriteLine("--------------------------------------------------");
 
 
-                    string ImageFile =SaveImageFile +@"\"+ Path.GetFileNameWithoutExtension(fileName);
+                    string ImageFile = SaveImageFile + @"\" + Path.GetFileNameWithoutExtension(fileName);
                     //識別Barcode[Code128]
                     var Barcodesresults = DecodeBarcodes(imageStream, out currentPage, out totalPages, ImageFile);
 
@@ -1138,7 +1144,7 @@ namespace Test
             return detectedObjects;
         }
 
-        public static List<DetectedObject> DecodeBarcodes(Stream imageStream, out int currentPage, out int totalPages,string ImageFile)
+        public static List<DetectedObject> DecodeBarcodes(Stream imageStream, out int currentPage, out int totalPages, string ImageFile)
         {
             var detectedObjects = new List<DetectedObject>();
             currentPage = 0;
@@ -1348,7 +1354,7 @@ namespace Test
         {
             try
             {
-                if (string.IsNullOrEmpty(ImageFile) || string.IsNullOrEmpty(fileName) || bitmap==null)
+                if (string.IsNullOrEmpty(ImageFile) || string.IsNullOrEmpty(fileName) || bitmap == null)
                 {
                     return;
                 }
@@ -1375,7 +1381,7 @@ namespace Test
         }
 
         // ========== 新增：放大倍数识别方法 ==========
-        private static SKBitmap TryDecodeWithMagnification(SKBitmap original, Func<BarcodeFormat, BarcodeReaderGeneric> createReader, float magnification,string ImageFile)
+        private static SKBitmap TryDecodeWithMagnification(SKBitmap original, Func<BarcodeFormat, BarcodeReaderGeneric> createReader, float magnification, string ImageFile)
         {
             //var results = new List<DetectedObject>();
             try
@@ -1590,11 +1596,11 @@ namespace Test
         }
 
         //多参数轻度预处理
-        private static List<DetectedObject> TryDecodeWithMultiLightProcessing(SKBitmap original, Func<BarcodeFormat, BarcodeReaderGeneric> createReader,string ImageFile="")
+        private static List<DetectedObject> TryDecodeWithMultiLightProcessing(SKBitmap original, Func<BarcodeFormat, BarcodeReaderGeneric> createReader, string ImageFile = "")
         {
             var results = new List<DetectedObject>();
             //var scales = new[] { 0.8f, 1.0f, 1.2f, 1.5f, 2.0f };
-            var scales = new[] {1.0f, 1.2f, 1.5f, 2.0f };
+            var scales = new[] { 1.0f, 1.2f, 1.5f, 2.0f };
 
             foreach (var scale in scales)
             {
@@ -1602,7 +1608,7 @@ namespace Test
                 {
                     using var processed = LightPreprocessImage(original, scale);
 
-                    SaveBitmapToFile(processed, scale+"Light.png", ImageFile);
+                    SaveBitmapToFile(processed, scale + "Light.png", ImageFile);
 
                     var luminanceSource = new SKBitmapLuminanceSource(processed);
                     var reader = createReader(BarcodeFormat.CODE_128);
@@ -1839,7 +1845,7 @@ namespace Test
         public static void ChangeImages()
         {
             string RelativePath = "/FileStore/20251212/1.jpg";
-            string RelativePaths=RelativePath.Replace("/FileStore/", "");
+            string RelativePaths = RelativePath.Replace("/FileStore/", "");
             string rootPath = @"C:\Users\liusi\Desktop\图片\FileStore\";
             string relativeFolderPath = Path.GetDirectoryName(RelativePaths);
             string fileName = Path.GetFileNameWithoutExtension(RelativePaths) + ".jpg";
@@ -2039,7 +2045,7 @@ namespace Test
             var ocrCorrections = new Dictionary<char, char>
             {
                  {'0', 'O'}, {'1', 'I'}, {'5', 'S'}, {'8', 'B'},
-                 {'2', 'Z'}, {'6', 'G'}, {'9', 'Q'}, {'7', 'T'}, 
+                 {'2', 'Z'}, {'6', 'G'}, {'9', 'Q'}, {'7', 'T'},
                  {'4', 'A'} // 4可能被识别为A
             };
 
@@ -2050,7 +2056,7 @@ namespace Test
             }
 
             //特殊處理
-            if (text== "NIIR" || text == "NLIR" || text == "NLLR")
+            if (text == "NIIR" || text == "NLIR" || text == "NLLR")
             {
                 text = "NUR";
             }
@@ -2100,6 +2106,692 @@ namespace Test
         }
 
         #endregion
+
+        #region OCR API
+
+        public static async Task OCRImage()
+        {
+            DateTime Pstarttime = DateTime.Now;
+            string folderPath = @"C:\Users\liusi\Desktop\Fw_ DMS discussion on Signature case";
+            //string SaveImageFile = @"C:\Users\liusi\Desktop\12196Demo";
+            // 检查文件夹是否存在
+            if (!Directory.Exists(folderPath))
+            {
+                Console.WriteLine($"文件夹不存在：{folderPath}");
+                return;
+            }
+
+            // 获取文件夹中所有支持的图片格式
+            string[] imageExtensions = { "*.jpg", "*.jpeg", "*.png", "*.bmp", "*.gif", "*.tiff", "*.tif" };
+            List<string> imageFiles = new List<string>();
+
+            foreach (string extension in imageExtensions)
+            {
+                try
+                {
+                    string[] files = Directory.GetFiles(folderPath, extension, SearchOption.AllDirectories);
+                    imageFiles.AddRange(files);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"搜索 {extension} 文件时出错：{ex.Message}");
+                }
+            }
+
+            if (imageFiles.Count == 0)
+            {
+                Console.WriteLine($"文件夹中没有找到图片文件：{folderPath}");
+                return;
+            }
+
+            Console.WriteLine($"找到 {imageFiles.Count} 个图片文件，开始识别...");
+            Console.WriteLine("==================================================");
+
+            int totalImages = imageFiles.Count;
+            int successCount = 0;
+            int failCount = 0;
+
+
+            // 循环识别每个图片文件
+            for (int i = 0; i < imageFiles.Count; i++)
+            {
+                DateTime starttime = DateTime.Now;
+                string imagePath = imageFiles[i];
+                string fileName = Path.GetFileName(imagePath);
+
+                Console.WriteLine($"\n[{i + 1}/{totalImages}] 正在识别：{fileName}");
+                Console.WriteLine($"文件路径：{imagePath}");
+
+
+                //using Stream imageStream = ReadLocalFileToStream(imagePath);
+
+                if (string.IsNullOrEmpty(imagePath))
+                {
+                    continue;
+                }
+
+                await OCRAPI(imagePath);
+            }
+        }
+
+
+        public static async Task OCRAPI(string imagePath)
+        {
+            using var client = new HttpClient();
+            using var content = new MultipartFormDataContent();
+            var fileName = Guid.NewGuid().ToString() + ".jpg";
+
+            // 图片路径
+            //string imagePath = "C:\\Users\\liusi\\Desktop\\Fw_ DMS discussion on Signature case\\CMP_ENT_V06.00 (1)-逐页转图片\\CMP_ENT_V06.00 (1)-逐页转图片-00002-Y.jpg";
+
+            // 读取图片并转换为Base64
+            byte[] imageBytes = File.ReadAllBytes(imagePath);
+            string base64Image = Convert.ToBase64String(imageBytes);
+
+            using Stream imageStream = ReadLocalFileToStream(imagePath);
+
+            // Create StreamContent from the input stream
+            var streamContent = new StreamContent(imageStream);
+            streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+
+            // Add the stream to form-data with field name "image"
+            content.Add(streamContent, "image", fileName);
+
+            var postUrl = "http://10.68.68.101:5000/api/ocr-stream";
+            // Send POST request
+            var response = await client.PostAsync(postUrl, content);
+            // Ensure success or throw exception
+            response.EnsureSuccessStatusCode();
+
+            // Return response body as string
+            string ocrResultJson = await response.Content.ReadAsStringAsync();
+
+            //Console.WriteLine(ocrResultJson);
+
+            // 解析OCR结果
+            var ocrResults = JsonSerializer.Deserialize<List<OCRResult>>(ocrResultJson);
+
+            // 调用签名区域截取功能
+            await ExtractSignatureAreas(ocrResults, imagePath);
+
+            //// 生成HTML文件
+            //string htmlContent = GenerateOCRVisualizationHTML(base64Image, ocrResults);
+
+            //// 保存HTML文件
+            //string htmlFilePath = Path.Combine(Path.GetDirectoryName(imagePath), "ocr_visualization.html");
+            //File.WriteAllText(htmlFilePath, htmlContent);
+
+            //Console.WriteLine($"OCR可视化文件已保存: {htmlFilePath}");
+
+            //// 打开HTML文件
+            //System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            //{
+            //    FileName = htmlFilePath,
+            //    UseShellExecute = true
+            //});
+        }
+
+        // OCR结果类
+        public class OCRResult
+        {
+            public string Text { get; set; }
+            public Boundary Boundary { get; set; }
+            public int Width { get; set; }
+            public int Height { get; set; }
+        }
+
+        public class Boundary
+        {
+            public int left { get; set; }
+            public int right { get; set; }
+            public int top { get; set; }
+            public int bottom { get; set; }
+        }
+
+        // 生成OCR可视化HTML
+        private static string GenerateOCRVisualizationHTML(string base64Image, List<OCRResult> ocrResults)
+        {
+            StringBuilder html = new StringBuilder();
+            html.AppendLine("<!DOCTYPE html>");
+            html.AppendLine("<html lang=\"zh-CN\">");
+            html.AppendLine("<head>");
+            html.AppendLine("    <meta charset=\"UTF-8\">");
+            html.AppendLine("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
+            html.AppendLine("    <title>OCR结果</title>");
+            html.AppendLine("    <style>");
+            html.AppendLine("        body { font-family: Arial, sans-serif; margin: 20px; }");
+            html.AppendLine("        .container { max-width: 1200px; margin: 0 auto; }");
+            html.AppendLine("        .image-container { position: relative; display: inline-block; margin-bottom: 20px; }");
+            html.AppendLine("        .ocr-box { position: absolute; border: 2px solid red; background-color: rgba(255, 0, 0, 0.1); pointer-events: none; }");
+            html.AppendLine("        .ocr-text { position: absolute; background-color: yellow; color: black; padding: 2px 5px; font-size: 12px; font-weight: bold; border: 1px solid orange; }");
+            html.AppendLine("        .results-table { width: 100%; border-collapse: collapse; margin-top: 20px; }");
+            html.AppendLine("        .results-table th, .results-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }");
+            html.AppendLine("        .results-table th { background-color: #f2f2f2; }");
+            html.AppendLine("        .highlight { background-color: #ffff99; }");
+            html.AppendLine("    </style>");
+            html.AppendLine("</head>");
+            html.AppendLine("<body>");
+            html.AppendLine("    <div class=\"container\">");
+            html.AppendLine("        <h1>OCR结果</h1>");
+            html.AppendLine("        <div class=\"image-container\">");
+            html.AppendLine($"            <img src=\"data:image/jpeg;base64,{base64Image}\" alt=\"OCR图片\" style=\"max-width: 100%; height: auto;\">");
+
+            // 添加OCR框和文本
+            if (ocrResults != null && ocrResults.Count > 0)
+            {
+                foreach (var result in ocrResults)
+                {
+                    int width = result.Boundary.right - result.Boundary.left;
+                    int height = result.Boundary.bottom - result.Boundary.top;
+
+                    // OCR框
+                    html.AppendLine($"            <div class=\"ocr-box\" style=\"left: {result.Boundary.left}px; top: {result.Boundary.top}px; width: {width}px; height: {height}px;\"></div>");
+
+                    // OCR文本（显示在框的上方）
+                    html.AppendLine($"            <div class=\"ocr-text\" style=\"left: {result.Boundary.left}px; top: {result.Boundary.top - 20}px;\">{result.Text}</div>");
+                }
+            }
+
+            html.AppendLine("        </div>");
+
+            // 添加结果表格
+            if (ocrResults != null && ocrResults.Count > 0)
+            {
+                html.AppendLine("        <h2>OCR识别结果</h2>");
+                html.AppendLine("        <table class=\"results-table\">");
+                html.AppendLine("            <thead>");
+                html.AppendLine("                <tr>");
+                html.AppendLine("                    <th>序号</th>");
+                html.AppendLine("                    <th>识别文本</th>");
+                html.AppendLine("                    <th>位置 (left, top, right, bottom)</th>");
+                html.AppendLine("                    <th>尺寸 (宽 x 高)</th>");
+                html.AppendLine("                </tr>");
+                html.AppendLine("            </thead>");
+                html.AppendLine("            <tbody>");
+
+                for (int i = 0; i < ocrResults.Count; i++)
+                {
+                    var result = ocrResults[i];
+                    html.AppendLine("                <tr>");
+                    html.AppendLine($"                    <td>{i + 1}</td>");
+                    html.AppendLine($"                    <td class=\"highlight\">{result.Text}</td>");
+                    html.AppendLine($"                    <td>({result.Boundary.left}, {result.Boundary.top}, {result.Boundary.right}, {result.Boundary.bottom})</td>");
+                    html.AppendLine($"                    <td>{result.Width} x {result.Height}</td>");
+                    html.AppendLine("                </tr>");
+                }
+
+                html.AppendLine("            </tbody>");
+                html.AppendLine("        </table>");
+            }
+            else
+            {
+                html.AppendLine("        <p>未识别到任何文本</p>");
+            }
+
+            html.AppendLine("    </div>");
+            html.AppendLine("</body>");
+            html.AppendLine("</html>");
+
+            return html.ToString();
+        }
+
+
+        /// <summary>
+        /// 签名区域信息
+        /// </summary>
+        public class SignatureAreas
+        {
+            public SignatureArea PatientSignatureArea { get; set; }
+            public SignatureArea DoctorSignatureArea { get; set; }
+        }
+
+        /// <summary>
+        /// 单个签名区域信息
+        /// </summary>
+        public class SignatureArea
+        {
+            public string FilePath { get; set; }
+            public Rectangle OriginalPosition { get; set; }
+            public Rectangle CroppedArea { get; set; }
+            public bool IsVerified { get; set; }
+        }
+
+        /// <summary>
+        /// 矩形区域
+        /// </summary>
+        public class Rectangle
+        {
+            public int X { get; set; }
+            public int Y { get; set; }
+            public int Width { get; set; }
+            public int Height { get; set; }
+
+            public Rectangle(int x, int y, int width, int height)
+            {
+                X = x;
+                Y = y;
+                Width = width;
+                Height = height;
+            }
+        }
+
+
+        /// <summary>
+        /// 定位并截取签名区域
+        /// </summary>
+        /// <param name="ocrResults">OCR识别结果</param>
+        /// <param name="imagePath">图片路径</param>
+        /// <returns>包含两个签名区域信息的对象</returns>
+        public static async Task<SignatureAreas> ExtractSignatureAreas(List<OCRResult> ocrResults, string imagePath)
+        {
+            var signatureAreas = new SignatureAreas();
+
+            // 定位第一个签名区域：病人/親屬/監護人/獲授權人士簽署
+            var patientSignatureArea = await LocatePatientSignatureArea(ocrResults, imagePath);
+            if (patientSignatureArea != null)
+            {
+                signatureAreas.PatientSignatureArea = patientSignatureArea;
+                Console.WriteLine($"找到病人签名区域: {patientSignatureArea.FilePath}");
+            }
+            else
+            {
+                Console.WriteLine("未找到病人签名区域");
+            }
+
+            // 定位第二个签名区域：醫生簽署
+            var doctorSignatureArea = await LocateDoctorSignatureArea(ocrResults, imagePath);
+            if (doctorSignatureArea != null)
+            {
+                signatureAreas.DoctorSignatureArea = doctorSignatureArea;
+                Console.WriteLine($"找到医生签名区域: {doctorSignatureArea.FilePath}");
+            }
+            else
+            {
+                Console.WriteLine("未找到医生签名区域");
+            }
+
+            return signatureAreas;
+        }
+
+        /// <summary>
+        /// 定位病人签名区域
+        /// </summary>
+        private static async Task<SignatureArea> LocatePatientSignatureArea(List<OCRResult> ocrResults, string imagePath)
+        {
+            // 可能的OCR识别错误模式
+            var patientSignaturePatterns = new[]
+            {
+            "病人/親屬/監護人/獲授權人士簽署",
+            "病人/親/護人/獲授權人士署",
+            "病人/親屬/監護人/獲授權人士署",
+            "病人/親/監護人/獲授權人士簽署",
+            "病人/親屬/護人/獲授權人士簽署"
+        };
+
+            // 查找匹配的文本
+            var signatureText = ocrResults.FirstOrDefault(r =>
+                patientSignaturePatterns.Any(pattern =>
+                    r.Text.Contains(pattern) ||
+                    CalculateSimilarity(r.Text, pattern) > 0.7));
+
+            if (signatureText == null)
+            {
+                Console.WriteLine("未找到病人签名文本");
+                return null;
+            }
+
+            Console.WriteLine($"找到病人签名文本: {signatureText.Text}");
+
+            // 截取上方584x80的区域
+            return await CropSignatureArea(signatureText.Boundary, imagePath, "patient_signature", 440, 98, true);
+        }
+
+        /// <summary>
+        /// 定位医生签名区域
+        /// </summary>
+        private static async Task<SignatureArea> LocateDoctorSignatureAreaOld(List<OCRResult> ocrResults, string imagePath)
+        {
+            // 可能的OCR识别错误模式
+            var doctorSignaturePatterns = new[]
+            {
+            "醫生簽署",
+            "醫生策署",
+            "醫生簽",
+            "醫生署"
+        };
+
+            //// 查找医生签名文本
+            //var doctorSignatureText = ocrResults.FirstOrDefault(r =>
+            //    doctorSignaturePatterns.Any(pattern =>
+            //        r.Text.Contains(pattern) ||
+            //        CalculateSimilarity(r.Text, pattern) > 0.7));
+
+            // 查找医生签名文本
+            var doctorSignatureText = ocrResults.Where(r =>
+                doctorSignaturePatterns.Any(pattern =>
+                    r.Text.Contains(pattern) ||
+                    CalculateSimilarity(r.Text, pattern) > 0.7)).ToList();
+
+            if (doctorSignatureText == null)
+            {
+                Console.WriteLine("未找到医生签名文本");
+                return null;
+            }
+
+            foreach (var item in doctorSignatureText)
+            {
+
+
+
+                Console.WriteLine($"找到医生签名文本: {item.Text}");
+
+                // 查找辅助标记：Doctor'sSignature
+                var doctorSignatureMarker = ocrResults.FirstOrDefault(r =>
+                    r.Text.Contains("Doctor'sSignature"));
+
+                // 查找辅助标记：醫生姓名
+                var doctorNameMarker = ocrResults.FirstOrDefault(r =>
+                    r.Text.Contains("醫生姓名"));
+
+                // 验证位置关系
+                if (doctorSignatureMarker != null && doctorNameMarker != null)
+                {
+                    // 检查医生签名是否在Doctor'sSignature正上方
+                    bool isAboveDoctorSignature = item.Boundary.bottom < doctorSignatureMarker.Boundary.top;
+
+                    // 检查医生签名是否在醫生姓名左侧
+                    bool isLeftOfDoctorName = item.Boundary.right < doctorNameMarker.Boundary.left;
+
+                    if (isAboveDoctorSignature && isLeftOfDoctorName)
+                    {
+                        Console.WriteLine("医生签名位置验证通过");
+                        // 截取上方584x80的区域
+                        return await CropSignatureArea(item.Boundary, imagePath, "doctor_signature", 440, 98, true);
+                    }
+                }
+            }
+
+            Console.WriteLine("医生签名位置验证失败，使用默认截取");
+            // 如果验证失败，仍然截取但标记为未验证
+            var area = await CropSignatureArea(doctorSignatureText[0].Boundary, imagePath, "doctor_signature_unverified", 440, 98, true);
+            area.IsVerified = false;
+            return area;
+        }
+
+
+        /// <summary>
+        /// 定位医生签名区域 - 简化版验证逻辑
+        /// </summary>
+        private static async Task<SignatureArea> LocateDoctorSignatureArea(List<OCRResult> ocrResults, string imagePath)
+        {
+            // 可能的OCR识别错误模式
+            var doctorSignaturePatterns = new[]
+            {
+                "醫生簽署",
+                "醫生策署",
+                "醫生簽",
+                "醫生署"
+            };
+
+            // 查找医生签名文本
+            var doctorSignatureText = ocrResults.Where(r =>
+                doctorSignaturePatterns.Any(pattern =>
+                    r.Text.Contains(pattern) ||
+                    CalculateSimilarity(r.Text, pattern) > 0.7)).ToList();
+
+            if (doctorSignatureText == null || doctorSignatureText.Count == 0)
+            {
+                Console.WriteLine("未找到医生签名文本");
+                return null;
+            }
+
+            // 查找所有Doctor'sSignature标记
+            var doctorSignatureMarkers = ocrResults.Where(r =>
+                r.Text.Contains("Doctor'sSignature")).ToList();
+
+            // 查找所有醫生姓名标记
+            var doctorNameMarkers = ocrResults.Where(r =>
+                r.Text.Contains("醫生姓名")).ToList();
+
+            foreach (var item in doctorSignatureText)
+            {
+                Console.WriteLine($"找到医生签名文本: {item.Text} ({item.Boundary.left}, {item.Boundary.top}, {item.Boundary.right}, {item.Boundary.bottom})");
+
+                // 查找在同一行的醫生姓名标记
+                var sameLineDoctorName = doctorNameMarkers
+                    .Where(marker => 
+                        // 同一行检查：top和bottom基本一致
+                        Math.Abs(marker.Boundary.top - item.Boundary.top) < 10 &&
+                        Math.Abs(marker.Boundary.bottom - item.Boundary.bottom) < 10)
+                    .FirstOrDefault();
+
+            // 查找在同一列的Doctor'sSignature标记
+                var sameColumnDoctorSignature = doctorSignatureMarkers
+                    .Where(marker =>
+                        // 同一列检查：left基本一致
+                        Math.Abs(marker.Boundary.left - item.Boundary.left) < 50 &&
+                        // 上下行挨着检查：用top判断，在正下方且距离适中
+                        marker.Boundary.top > item.Boundary.top &&
+                        Math.Abs(marker.Boundary.top - item.Boundary.top) < 50) // 用top距离判断，放宽到50像素
+                    .FirstOrDefault();
+
+                // 简化验证逻辑
+                if (sameLineDoctorName != null && sameColumnDoctorSignature != null)
+                {
+                    // 验证右侧关系
+                    bool isRightOfDoctorName = item.Boundary.right < sameLineDoctorName.Boundary.left;
+                    
+                    // 验证上方关系
+                    bool isAboveDoctorSignature = item.Boundary.top < sameColumnDoctorSignature.Boundary.top;
+
+                    Console.WriteLine($"醫生姓名位置: ({sameLineDoctorName.Boundary.left}, {sameLineDoctorName.Boundary.top}, {sameLineDoctorName.Boundary.right}, {sameLineDoctorName.Boundary.bottom})");
+                    Console.WriteLine($"Doctor'sSignature位置: ({sameColumnDoctorSignature.Boundary.left}, {sameColumnDoctorSignature.Boundary.top}, {sameColumnDoctorSignature.Boundary.right}, {sameColumnDoctorSignature.Boundary.bottom})");
+                    Console.WriteLine($"右侧验证: {isRightOfDoctorName} (距离: {sameLineDoctorName.Boundary.left - item.Boundary.right}px)");
+                    Console.WriteLine($"上方验证: {isAboveDoctorSignature} (距离: {sameColumnDoctorSignature.Boundary.top - item.Boundary.bottom}px)");
+
+                    if (isRightOfDoctorName && isAboveDoctorSignature)
+                    {
+                        Console.WriteLine("医生签名位置验证通过 - 简化逻辑");
+                        // 截取上方区域
+                        return await CropSignatureArea(item.Boundary, imagePath, "doctor_signature", 440, 98, true);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"未找到匹配的辅助标记 - 同一行醫生姓名: {sameLineDoctorName != null}, 同一列Doctor'sSignature: {sameColumnDoctorSignature != null}");
+                }
+            }
+
+            Console.WriteLine("所有医生签名位置验证失败，使用默认截取");
+            // 如果验证失败，仍然截取但标记为未验证
+            var area = await CropSignatureArea(doctorSignatureText[0].Boundary, imagePath, "doctor_signature_unverified", 440, 98, true);
+            area.IsVerified = false;
+            return area;
+        }
+
+        /// <summary>
+        /// 截取签名区域BySixLabors
+        /// </summary>
+        private static async Task<SignatureArea> CropSignatureArea(Boundary boundary, string imagePath, string prefix, int width, int height, bool cropAbove)
+        {
+            return await CropSignatureAreaBySixLabors(boundary, imagePath, prefix, width, height, true);
+            //return await CropSignatureAreaBySkiaSharp(boundary, imagePath, prefix, width, height, true);
+        }
+
+        /// <summary>
+        /// 使用SixLabors截取签名区域
+        /// </summary>
+        private static async Task<SignatureArea> CropSignatureAreaBySixLabors(Boundary boundary, string imagePath, string prefix, int width, int height, bool cropAbove)
+        {
+            try
+            {
+                using var image = SixLabors.ImageSharp.Image.Load(imagePath);
+
+                // 计算截取区域
+                int cropX, cropY;
+
+                if (cropAbove)
+                {
+                    // 截取上方区域
+                    cropX = boundary.left;
+                    cropY = Math.Max(0, boundary.top - height);
+                }
+                else
+                {
+                    // 截取包含文本的区域
+                    cropX = boundary.left;
+                    cropY = boundary.top;
+                }
+
+                // 确保不超出图片边界
+                cropX = Math.Max(0, cropX);
+                cropY = Math.Max(0, cropY);
+                width = Math.Min(width, image.Width - cropX);
+                height = Math.Min(height, image.Height - cropY);
+
+                if (width <= 0 || height <= 0)
+                {
+                    Console.WriteLine("截取区域超出图片边界");
+                    return null;
+                }
+
+                // 截取区域
+                using var croppedImage = image.Clone(ctx => ctx
+                    .Crop(new SixLabors.ImageSharp.Rectangle(cropX, cropY, width, height)));
+
+                // 保存截取图片
+                string outputDir = Path.Combine(Path.GetDirectoryName(imagePath), "signature_areas");
+                Directory.CreateDirectory(outputDir);
+
+                string outputPath = Path.Combine(outputDir, $"{prefix}_{DateTime.Now:yyyyMMddHHmmss}.jpg");
+                await croppedImage.SaveAsJpegAsync(outputPath);
+
+                return new SignatureArea
+                {
+                    FilePath = outputPath,
+                    OriginalPosition = new Rectangle(boundary.left, boundary.top, boundary.right - boundary.left, boundary.bottom - boundary.top),
+                    CroppedArea = new Rectangle(cropX, cropY, width, height),
+                    IsVerified = true
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"截取签名区域时出错: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 使用SkiaSharp截取签名区域
+        /// </summary>
+        private static async Task<SignatureArea> CropSignatureAreaBySkiaSharp(Boundary boundary, string imagePath, string prefix, int width, int height, bool cropAbove)
+        {
+            try
+            {
+                // 使用SkiaSharp加载图片
+                using var bitmap = SKBitmap.Decode(imagePath);
+                if (bitmap == null)
+                {
+                    Console.WriteLine("无法加载图片");
+                    return null;
+                }
+
+                // 计算截取区域
+                int cropX, cropY;
+
+                if (cropAbove)
+                {
+                    // 截取上方区域
+                    cropX = boundary.left;
+                    cropY = Math.Max(0, boundary.top - height);
+                }
+                else
+                {
+                    // 截取包含文本的区域
+                    cropX = boundary.left;
+                    cropY = boundary.top;
+                }
+
+                // 确保不超出图片边界
+                cropX = Math.Max(0, cropX);
+                cropY = Math.Max(0, cropY);
+                width = Math.Min(width, bitmap.Width - cropX);
+                height = Math.Min(height, bitmap.Height - cropY);
+
+                if (width <= 0 || height <= 0)
+                {
+                    Console.WriteLine("截取区域超出图片边界");
+                    return null;
+                }
+
+                // 创建截取区域
+                var cropRect = new SKRectI(cropX, cropY, cropX + width, cropY + height);
+
+                // 截取图片
+                using var croppedBitmap = new SKBitmap(width, height);
+                if (!bitmap.ExtractSubset(croppedBitmap, cropRect))
+                {
+                    Console.WriteLine("截取图片失败");
+                    return null;
+                }
+
+                // 保存截取图片
+                string outputDir = Path.Combine(Path.GetDirectoryName(imagePath), "signature_areas_skiasharp");
+                Directory.CreateDirectory(outputDir);
+
+                string outputPath = Path.Combine(outputDir, $"{prefix}_{DateTime.Now:yyyyMMddHHmmss}.jpg");
+
+                // 使用SKImage保存图片
+                using var image = SKImage.FromBitmap(croppedBitmap);
+                using var data = image.Encode(SKEncodedImageFormat.Jpeg, 90);
+                using var stream = File.OpenWrite(outputPath);
+                data.SaveTo(stream);
+
+                return new SignatureArea
+                {
+                    FilePath = outputPath,
+                    OriginalPosition = new Rectangle(boundary.left, boundary.top, boundary.right - boundary.left, boundary.bottom - boundary.top),
+                    CroppedArea = new Rectangle(cropX, cropY, width, height),
+                    IsVerified = true
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"使用SkiaSharp截取签名区域时出错: {ex.Message}");
+                return null;
+            }
+        }
+
+
+        /// <summary>
+        /// 计算文本相似度（处理OCR识别错误）
+        /// </summary>
+        private static double CalculateSimilarity(string text1, string text2)
+        {
+            if (string.IsNullOrEmpty(text1) || string.IsNullOrEmpty(text2))
+                return 0;
+
+            text1 = text1.ToLower().Replace(" ", "");
+            text2 = text2.ToLower().Replace(" ", "");
+
+            if (text1 == text2)
+                return 1.0;
+
+            // 简单的字符匹配计算
+            int matches = 0;
+            int minLength = Math.Min(text1.Length, text2.Length);
+
+            for (int i = 0; i < minLength; i++)
+            {
+                if (text1[i] == text2[i])
+                    matches++;
+            }
+
+            return (double)matches / Math.Max(text1.Length, text2.Length);
+        }
+
+
+        #endregion 
     }
 }
 
