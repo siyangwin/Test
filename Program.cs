@@ -10,6 +10,7 @@ using System.Diagnostics.Metrics;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using ZXing;
@@ -27,6 +28,9 @@ namespace Test
             //ChangeImages();
             //OCRChange();
             OCRImage();
+            //string folderPath = @"C:\Users\liusi\Desktop\Form\check";
+            //TestSignatureDetection(folderPath);
+
             Console.WriteLine();
             Console.ReadKey();
 
@@ -2108,32 +2112,74 @@ namespace Test
         #endregion
 
         #region OCR API
-           // 在namespace Test内部添加以下类定义
+        // 在namespace Test内部添加以下类定义
         public class SignatureAreaConfig
         {
+            [JsonPropertyName("targetParameters")]
             public List<string> TargetParameters { get; set; } = new List<string>();
+
+            [JsonPropertyName("bottomReferenceParameters")]
             public List<string> BottomReferenceParameters { get; set; } = new List<string>();
+
+            [JsonPropertyName("rightReferenceParameters")]
             public List<string> RightReferenceParameters { get; set; } = new List<string>();
+
+            [JsonPropertyName("signatureAreaWidth")]
             public int SignatureAreaWidth { get; set; } = 440;
+
+            [JsonPropertyName("signatureAreaHeight")]
             public int SignatureAreaHeight { get; set; } = 98;
         }
 
         public class FormSignatureConfig
         {
+            [JsonPropertyName("formId")]
             public string FormId { get; set; } = "";
+
+            [JsonPropertyName("page")]
             public int Page { get; set; } = 3;
+
+            [JsonPropertyName("patient")]
             public SignatureAreaConfig Patient { get; set; } = new SignatureAreaConfig();
+
+            [JsonPropertyName("doctor")]
             public SignatureAreaConfig Doctor { get; set; } = new SignatureAreaConfig();
         }
 
-        static string Json="[{\"formId\":\"Defaut\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"ENT-BUDES-001\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"ONG-BUDES-003\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}}]";
-        List<FormSignatureConfig> configs = JsonSerializer.Deserialize<List<FormSignatureConfig>>(Json);
+        static string Json = "[{\"formId\":\"Defaut\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"ENT-BUDES-001\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"ONG-BUDES-003\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"ONG-BUDES-015\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"ONT-BUDES-001\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"ONT-BUDES-007\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"URO-BUDES-010\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"URO-BUDES-014\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}}]";
 
-//
-   
+        static List<FormSignatureConfig> configs = JsonSerializer.Deserialize<List<FormSignatureConfig>>(Json);
+
+        static FormSignatureConfig formIdConfig = null;
+
 
         public static async Task OCRImage()
         {
+            //// 使用配置参数
+            //foreach (var config in configs)
+            //{
+            //    Console.WriteLine($"表单ID: {config.FormId}");
+            //    Console.WriteLine($"页码: {config.Page}");
+
+            //    // 患者签名配置
+            //    Console.WriteLine("患者签名目标参数:");
+            //    foreach (var target in config.Patient.TargetParameters)
+            //    {
+            //        Console.WriteLine($"  - {target}");
+            //    }
+            //    Console.WriteLine($"患者签名区域: {config.Patient.SignatureAreaWidth}x{config.Patient.SignatureAreaHeight}");
+
+            //    // 医生签名配置
+            //    Console.WriteLine("医生签名目标参数:");
+            //    foreach (var target in config.Doctor.TargetParameters)
+            //    {
+            //        Console.WriteLine($"  - {target}");
+            //    }
+            //    Console.WriteLine($"医生签名区域: {config.Doctor.SignatureAreaWidth}x{config.Doctor.SignatureAreaHeight}");
+            //    Console.WriteLine();
+            //}
+
+
             DateTime Pstarttime = DateTime.Now;
             string folderPath = @"C:\Users\liusi\Desktop\Form";
             // 检查文件夹是否存在
@@ -2182,11 +2228,25 @@ namespace Test
                 string imagePath = imageFiles[i];
                 string fileName = Path.GetFileName(imagePath);
 
-                if(!fileName.Contains("3"))
+                // 获取上级文件夹名称
+                string parentFolderName = Path.GetFileName(Path.GetDirectoryName(imagePath));
+                Console.WriteLine($"\n上级文件夹名称: {parentFolderName}");
+
+                formIdConfig = configs.Where(s => s.FormId.Contains(parentFolderName)).FirstOrDefault();
+
+                if (formIdConfig == null)
+                {
+                    System.Console.WriteLine($"\nformId不存在,跳过");
+                    continue;
+                }
+
+
+                if (!fileName.Contains(formIdConfig.Page.ToString()))
                 {
                     System.Console.WriteLine($"\n不是签名页,跳过");
                     continue;
                 }
+
 
                 Console.WriteLine($"\n[{i + 1}/{totalImages}] 正在识别：{fileName}");
                 Console.WriteLine($"文件路径：{imagePath}");
@@ -2247,7 +2307,7 @@ namespace Test
 
             // 保存HTML文件
 
-            string FileName= Path.GetFileNameWithoutExtension(imagePath);
+            string FileName = Path.GetFileNameWithoutExtension(imagePath);
 
             string htmlFilePath = Path.Combine(Path.GetDirectoryName(imagePath), $"{FileName}-ocr.html");
             File.WriteAllText(htmlFilePath, htmlContent);
@@ -2423,7 +2483,7 @@ namespace Test
             {
                 signatureAreas.PatientSignatureArea = patientSignatureArea;
                 Console.WriteLine($"找到病人签名区域: {patientSignatureArea.FilePath}");
-                Console.WriteLine("病人签名是否含有签名：" + HasHandwrittenSignaturePrecise(patientSignatureArea.FilePath));
+                Console.WriteLine("病人签名是否含有签名：" + HasSignature(patientSignatureArea.FilePath));
             }
             else
             {
@@ -2436,7 +2496,7 @@ namespace Test
             {
                 signatureAreas.DoctorSignatureArea = doctorSignatureArea;
                 Console.WriteLine($"找到医生签名区域: {doctorSignatureArea.FilePath}");
-                Console.WriteLine("医生签名是否含有签名：" + HasHandwrittenSignaturePrecise(doctorSignatureArea.FilePath));
+                Console.WriteLine("医生签名是否含有签名：" + HasSignature(doctorSignatureArea.FilePath));
             }
             else
             {
@@ -2452,14 +2512,16 @@ namespace Test
         private static async Task<SignatureArea> LocatePatientSignatureArea(List<OCRResult> ocrResults, string imagePath)
         {
             // 可能的OCR识别错误模式
-            var patientSignaturePatterns = new[]
-            {
-            "病人/親屬/監護人/獲授權人士簽署",
-            "病人/親/護人/獲授權人士署",
-            "病人/親屬/監護人/獲授權人士署",
-            "病人/親/監護人/獲授權人士簽署",
-            "病人/親屬/護人/獲授權人士簽署"
-            };
+            //var patientSignaturePatterns = new[]
+            //{
+            //"病人/親屬/監護人/獲授權人士簽署",
+            //"病人/親/護人/獲授權人士署",
+            //"病人/親屬/監護人/獲授權人士署",
+            //"病人/親/監護人/獲授權人士簽署",
+            //"病人/親屬/護人/獲授權人士簽署"
+            //};
+
+            var patientSignaturePatterns = formIdConfig.Patient.TargetParameters;
 
             // 查找匹配的文本
             var signatureText = ocrResults.FirstOrDefault(r =>
@@ -2555,13 +2617,15 @@ namespace Test
         private static async Task<SignatureArea> LocateDoctorSignatureArea(List<OCRResult> ocrResults, string imagePath)
         {
             // 可能的OCR识别错误模式
-            var doctorSignaturePatterns = new[]
-            {
-                "醫生簽署",
-                "醫生策署",
-                "醫生簽",
-                "醫生署"
-            };
+            //var doctorSignaturePatterns = new[]
+            //{
+            //    "醫生簽署",
+            //    "醫生策署",
+            //    "醫生簽",
+            //    "醫生署"
+            //};
+
+            var doctorSignaturePatterns = formIdConfig.Doctor.TargetParameters;
 
             // 查找医生签名文本
             var doctorSignatureText = ocrResults.Where(r =>
@@ -2576,12 +2640,16 @@ namespace Test
             }
 
             // 查找所有Doctor'sSignature标记
-            var doctorSignatureMarkers = ocrResults.Where(r =>
-                r.Text.Contains("Doctor'sSignature")).ToList();
+            //var doctorSignatureMarkers = ocrResults.Where(r =>
+            //    r.Text.Contains(formIdConfig.Doctor.BottomReferenceParameters)).ToList();
+            var doctorSignatureMarkers = ocrResults.Where(r => formIdConfig.Doctor.BottomReferenceParameters.Any(param => r.Text.Contains(param))).ToList();
 
             // 查找所有醫生姓名标记
-            var doctorNameMarkers = ocrResults.Where(r =>
-                r.Text.Contains("醫生姓名")).ToList();
+            //var doctorNameMarkers = ocrResults.Where(r =>
+            //    r.Text.Contains(formIdConfig.Doctor.RightReferenceParameters)).ToList();
+
+            //包含匹配，OCR识别可能存在细微差异。
+            var doctorNameMarkers = ocrResults.Where(r => formIdConfig.Doctor.RightReferenceParameters.Any(param => r.Text.Contains(param))).ToList();
 
             foreach (var item in doctorSignatureText)
             {
@@ -2589,13 +2657,13 @@ namespace Test
 
                 // 查找在同一行的醫生姓名标记
                 var sameLineDoctorName = doctorNameMarkers
-                    .Where(marker => 
+                    .Where(marker =>
                         // 同一行检查：top和bottom基本一致
                         Math.Abs(marker.Boundary.top - item.Boundary.top) < 10 &&
                         Math.Abs(marker.Boundary.bottom - item.Boundary.bottom) < 10)
                     .FirstOrDefault();
 
-            // 查找在同一列的Doctor'sSignature标记
+                // 查找在同一列的Doctor'sSignature标记
                 var sameColumnDoctorSignature = doctorSignatureMarkers
                     .Where(marker =>
                         // 同一列检查：left基本一致
@@ -2610,7 +2678,7 @@ namespace Test
                 {
                     // 验证右侧关系
                     bool isRightOfDoctorName = item.Boundary.right < sameLineDoctorName.Boundary.left;
-                    
+
                     // 验证上方关系
                     bool isAboveDoctorSignature = item.Boundary.top < sameColumnDoctorSignature.Boundary.top;
 
@@ -2694,7 +2762,7 @@ namespace Test
                 Directory.CreateDirectory(outputDir);
 
                 //string outputPath = Path.Combine(outputDir, $"{prefix}_{DateTime.Now:yyyyMMddHHmmss}.jpg");
-                string FileName= Path.GetFileNameWithoutExtension(imagePath);
+                string FileName = Path.GetFileNameWithoutExtension(imagePath);
                 string outputPath = Path.Combine(outputDir, $"{prefix}-{FileName}.jpg");
                 await croppedImage.SaveAsJpegAsync(outputPath);
 
@@ -2705,6 +2773,24 @@ namespace Test
                     CroppedArea = new Rectangle(cropX, cropY, width, height),
                     IsVerified = true
                 };
+
+
+
+                //// 将裁剪后的图像写入到内存流中而不是保存为文件
+                //var memoryStream = new System.IO.MemoryStream();
+                //await croppedImage.SaveAsJpegAsync(memoryStream);
+
+                //// 重置流的位置到开始，以便读取
+                //memoryStream.Position = 0;
+
+                //// 返回流或其他需要的信息
+                //return new
+                //{
+                //    ImageStream = memoryStream,
+                //    OriginalPosition = new Rectangle(boundary.left, boundary.top, boundary.right - boundary.left, boundary.bottom - boundary.top),
+                //    CroppedArea = new Rectangle(cropX, cropY, width, height),
+                //    IsVerified = true
+                //};
             }
             catch (Exception ex)
             {
@@ -3075,7 +3161,7 @@ namespace Test
                 }
 
                 // 基础条件检查
-                if (inkPixels.Count < minInkPixels || 
+                if (inkPixels.Count < minInkPixels ||
                     (float)inkPixels.Count / totalPixels < minInkRatio)
                 {
                     return false;
@@ -3101,12 +3187,12 @@ namespace Test
                         component.Add((x, y));
 
                         // 8方向邻域
-                        foreach (var nb in new[] { 
+                        foreach (var nb in new[] {
                             (x+1, y), (x-1, y), (x, y+1), (x, y-1),
                             (x+1, y+1), (x+1, y-1), (x-1, y+1), (x-1, y-1)
                         })
                         {
-                            if (nb.Item1 >= 0 && nb.Item1 < image.Width && 
+                            if (nb.Item1 >= 0 && nb.Item1 < image.Width &&
                                 nb.Item2 >= 0 && nb.Item2 < image.Height &&
                                 inkPixels.Contains(nb) && !visited.Contains(nb))
                             {
@@ -3127,13 +3213,13 @@ namespace Test
                     int height = maxY - minY + 1;
 
                     // 排除细长线
-                    if ((height <= maxLineWidth && width > height * 4) || 
+                    if ((height <= maxLineWidth && width > height * 4) ||
                         (width <= maxLineWidth && height > width * 4))
                         continue;
 
                     // 计算紧凑度：面积/(包围盒面积)
                     float compactness = (float)component.Count / (width * height);
-                    
+
                     // 签名通常有中等紧凑度（0.1-0.6）
                     if (compactness > 0.05f && compactness < 0.8f)
                     {
@@ -3525,7 +3611,7 @@ namespace Test
         }
 
 
-         /// <summary>
+        /// <summary>
         /// 精准签名检测 - 专门针对裁剪图片优化，排除底部线条和印刷文字
         /// </summary>
         public static bool HasHandwrittenSignaturePrecise(string imageFilePath)
@@ -3562,7 +3648,7 @@ namespace Test
                     {
                         var p = processedImage[x, y];
                         byte grayValue = (byte)(0.299 * p.R + 0.587 * p.G + 0.114 * p.B);
-                        
+
                         // 检查是否为真正的暗像素（不是噪声）
                         if (grayValue < darkThreshold)
                         {
@@ -3579,7 +3665,7 @@ namespace Test
                                         darkNeighbors++;
                                 }
                             }
-                            
+
                             // 至少有2个暗邻居才认为是有效墨迹
                             if (darkNeighbors >= 2)
                             {
@@ -3590,7 +3676,7 @@ namespace Test
                 }
 
                 // 基础条件检查（更严格）
-                if (inkPixels.Count < minInkPixels || 
+                if (inkPixels.Count < minInkPixels ||
                     (float)inkPixels.Count / totalPixels < minInkRatio)
                 {
                     return false;
@@ -3599,7 +3685,7 @@ namespace Test
                 // 分析墨迹分布特征（排除底部区域后）
                 var rowDensity = new int[processedImage.Height];
                 var colDensity = new int[processedImage.Width];
-                
+
                 foreach (var (x, y) in inkPixels)
                 {
                     rowDensity[y]++;
@@ -3610,7 +3696,7 @@ namespace Test
                 int topHalfPixels = 0;
                 int bottomHalfPixels = 0;
                 int middleY = processedImage.Height / 2;
-                
+
                 foreach (var (x, y) in inkPixels)
                 {
                     if (y < middleY) topHalfPixels++;
@@ -3649,12 +3735,12 @@ namespace Test
                         var (x, y) = queue.Dequeue();
                         component.Add((x, y));
 
-                        foreach (var nb in new[] { 
+                        foreach (var nb in new[] {
                             (x+1, y), (x-1, y), (x, y+1), (x, y-1),
                             (x+1, y+1), (x+1, y-1), (x-1, y+1), (x-1, y-1)
                         })
                         {
-                            if (nb.Item1 >= 0 && nb.Item1 < processedImage.Width && 
+                            if (nb.Item1 >= 0 && nb.Item1 < processedImage.Width &&
                                 nb.Item2 >= 0 && nb.Item2 < processedImage.Height &&
                                 inkPixels.Contains(nb) && !visited.Contains(nb))
                             {
@@ -3675,7 +3761,7 @@ namespace Test
                     int height = maxY - minY + 1;
 
                     // 排除细长线（更严格）
-                    if ((height <= maxLineWidth && width > height * 5) || 
+                    if ((height <= maxLineWidth && width > height * 5) ||
                         (width <= maxLineWidth && height > width * 5))
                         continue;
 
@@ -3688,7 +3774,7 @@ namespace Test
                     // 计算紧凑度和复杂度
                     float compactness = (float)component.Count / (width * height);
                     float aspectRatio = (float)width / Math.Max(height, 1);
-                    
+
                     // 签名特征：
                     // - 紧凑度适中（0.1-0.6）
                     // - 宽高比适中（0.5-3.0）
@@ -3799,9 +3885,9 @@ namespace Test
                     var (x, y) = queue.Dequeue();
                     componentSize++;
 
-                    foreach (var nb in new[] { (x+1, y), (x-1, y), (x, y+1), (x, y-1) })
+                    foreach (var nb in new[] { (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1) })
                     {
-                        if (nb.Item1 >= 0 && nb.Item1 < imageWidth && 
+                        if (nb.Item1 >= 0 && nb.Item1 < imageWidth &&
                             nb.Item2 >= 0 && nb.Item2 < imageHeight &&
                             inkPixels.Contains(nb) && !visited.Contains(nb))
                         {
@@ -3824,7 +3910,133 @@ namespace Test
             return false;
         }
 
-        #endregion 
+        /// <summary>
+        /// 精准判定：过滤边缘打印线条，仅识别签名
+        /// </summary>
+        public static bool HasSignature(string imageFilePath)
+        {
+            if (!File.Exists(imageFilePath))
+                throw new FileNotFoundException("图片不存在", imageFilePath);
+
+            using var image = Image.Load<Rgba32>(imageFilePath);
+            // 预处理：极严格二值化（只保留深色区域）+ 裁剪边缘（去除截图边缘干扰）
+            image.Mutate(x => x
+                .Grayscale()
+                .BinaryThreshold(0.9f) // 阈值0.9：仅保留最深的黑色区域
+                .Crop(new SixLabors.ImageSharp.Rectangle(10, 10, image.Width - 20, image.Height - 20)) // 裁剪边缘10像素
+            );
+
+            // 计算三个核心指标：不规则复杂度、黑色像素占比、线条连续性
+            var metrics = CalculateSignatureMetrics(image);
+
+            // 三重判定（同时满足才判定为签名）
+            const int IrregularThreshold = 20;          // 不规则复杂度阈值
+            const float BlackRatioThreshold = 0.008f;   // 黑色像素占比阈值（0.8%）
+            //const float LineContinuityThreshold = 0.6f; // 线条连续性阈值（打印线条>0.6，签名<0.6）
+
+            bool isIrregular = metrics.IrregularComplexity > IrregularThreshold;
+            bool hasEnoughBlack = metrics.BlackPixelRatio > BlackRatioThreshold;
+            //bool isDiscontinuous = metrics.LineContinuity < LineContinuityThreshold;
+            return isIrregular && hasEnoughBlack;
+            //return isIrregular && hasEnoughBlack && isDiscontinuous;
+        }
+
+        /// <summary>
+        /// 签名指标：不规则复杂度 + 黑色像素占比 + 线条连续性
+        /// </summary>
+        private class SignatureMetrics
+        {
+            public int IrregularComplexity { get; set; } // 不规则复杂度
+            public float BlackPixelRatio { get; set; }  // 黑色像素占比
+            public float LineContinuity { get; set; }   // 线条连续性（打印线条连续，签名零散）
+        }
+
+        private static SignatureMetrics CalculateSignatureMetrics(Image<Rgba32> image)
+        {
+            int totalPixels = image.Width * image.Height;
+            int blackPixelCount = 0;
+            int irregularComplexity = 0;
+            int continuousLineCount = 0;
+            int totalLineSegments = 0;
+
+            // 遍历所有像素（跳过边缘）
+            for (int y = 2; y < image.Height - 2; y++)
+            {
+                for (int x = 2; x < image.Width - 2; x++)
+                {
+                    bool isBlack = image[x, y].R < 128;
+                    if (!isBlack) continue;
+
+                    blackPixelCount++;
+
+                    // 1. 计算不规则复杂度（3x3范围内相同像素少=签名）
+                    int sameNeighborCount = 0;
+                    for (int dy = -1; dy <= 1; dy++)
+                        for (int dx = -1; dx <= 1; dx++)
+                            if (image[x + dx, y + dy].R < 128 == isBlack)
+                                sameNeighborCount++;
+                    if (sameNeighborCount < 6)
+                        irregularComplexity++;
+
+                    // 2. 计算线条连续性（打印线条连续，签名零散）
+                    bool rightIsBlack = image[x + 1, y].R < 128;
+                    bool downIsBlack = image[x, y + 1].R < 128;
+                    if (rightIsBlack || downIsBlack)
+                        continuousLineCount++;
+                    totalLineSegments++;
+                }
+            }
+
+            // 计算指标
+            var metrics = new SignatureMetrics
+            {
+                IrregularComplexity = irregularComplexity,
+                BlackPixelRatio = (float)blackPixelCount / totalPixels,
+                LineContinuity = totalLineSegments == 0 ? 0 : (float)continuousLineCount / totalLineSegments
+            };
+            return metrics;
+        }
+
+        // 测试方法：输出所有指标，方便调试
+        public static void TestSignatureDetection(string testFolderPath)
+        {
+            if (!Directory.Exists(testFolderPath))
+            {
+                Console.WriteLine("测试文件夹不存在");
+                return;
+            }
+
+            foreach (var file in Directory.GetFiles(testFolderPath).Where(f => f.EndsWith(".png") || f.EndsWith(".jpg")))
+            {
+                try
+                {
+                    bool hasSig = HasSignature(file);
+                    using var img = Image.Load<Rgba32>(file);
+                    //img.Mutate(x => x.Grayscale().BinaryThreshold(0.9f).Crop(new Rectangle(10, 10, img.Width - 20, img.Height - 20)));
+
+                    // 修正后：
+                    img.Mutate(x => x
+                        .Grayscale()
+                        .BinaryThreshold(0.9f)
+                        // 明确使用ImageSharp的Rectangle类型
+                        .Crop(new SixLabors.ImageSharp.Rectangle(10, 10, img.Width - 20, img.Height - 20))
+                    );
+                    var metrics = CalculateSignatureMetrics(img);
+
+                    Console.WriteLine($"【{Path.GetFileName(file)}】");
+                    Console.WriteLine($"  不规则复杂度：{metrics.IrregularComplexity}");
+                    Console.WriteLine($"  黑色像素占比：{metrics.BlackPixelRatio:P2}");
+                    Console.WriteLine($"  线条连续性：{metrics.LineContinuity:P2}");
+                    Console.WriteLine($"  结果：{(hasSig ? "有签名" : "无签名")}");
+                    Console.WriteLine("------------------------");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"处理{Path.GetFileName(file)}失败：{ex.Message}");
+                }
+            }
+        }
+        #endregion
     }
 }
 
