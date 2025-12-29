@@ -1,20 +1,21 @@
 ﻿using Org.BouncyCastle.Crypto.Agreement;
 using Org.BouncyCastle.Utilities.Zlib;
 using Renci.SshNet;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using SkiaSharp;
 using SMBLibrary.Client;
 using System.Diagnostics.Metrics;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using ZXing;
 using ZXing.Common;
 using ZXing.SkiaSharp;
 using static Test.Program;
-using System.Text.Json;
-using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp;
 
 namespace Test
 {
@@ -25,7 +26,6 @@ namespace Test
             //Zxing();
             //ChangeImages();
             //OCRChange();
-
             OCRImage();
             Console.WriteLine();
             Console.ReadKey();
@@ -2108,12 +2108,34 @@ namespace Test
         #endregion
 
         #region OCR API
+           // 在namespace Test内部添加以下类定义
+        public class SignatureAreaConfig
+        {
+            public List<string> TargetParameters { get; set; } = new List<string>();
+            public List<string> BottomReferenceParameters { get; set; } = new List<string>();
+            public List<string> RightReferenceParameters { get; set; } = new List<string>();
+            public int SignatureAreaWidth { get; set; } = 440;
+            public int SignatureAreaHeight { get; set; } = 98;
+        }
+
+        public class FormSignatureConfig
+        {
+            public string FormId { get; set; } = "";
+            public int Page { get; set; } = 3;
+            public SignatureAreaConfig Patient { get; set; } = new SignatureAreaConfig();
+            public SignatureAreaConfig Doctor { get; set; } = new SignatureAreaConfig();
+        }
+
+        static string Json="[{\"formId\":\"Defaut\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"ENT-BUDES-001\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"ONG-BUDES-003\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}}]";
+        List<FormSignatureConfig> configs = JsonSerializer.Deserialize<List<FormSignatureConfig>>(Json);
+
+//
+   
 
         public static async Task OCRImage()
         {
             DateTime Pstarttime = DateTime.Now;
-            string folderPath = @"C:\Users\liusi\Desktop\Fw_ DMS discussion on Signature case";
-            //string SaveImageFile = @"C:\Users\liusi\Desktop\12196Demo";
+            string folderPath = @"C:\Users\liusi\Desktop\Form";
             // 检查文件夹是否存在
             if (!Directory.Exists(folderPath))
             {
@@ -2129,7 +2151,8 @@ namespace Test
             {
                 try
                 {
-                    string[] files = Directory.GetFiles(folderPath, extension, SearchOption.AllDirectories);
+                    //string[] files = Directory.GetFiles(folderPath, extension, SearchOption.AllDirectories);
+                    string[] files = Directory.GetFiles(folderPath, extension, SearchOption.AllDirectories).Where(file => !file.Contains("signature_areas")).ToArray();
                     imageFiles.AddRange(files);
                 }
                 catch (Exception ex)
@@ -2159,9 +2182,14 @@ namespace Test
                 string imagePath = imageFiles[i];
                 string fileName = Path.GetFileName(imagePath);
 
+                if(!fileName.Contains("3"))
+                {
+                    System.Console.WriteLine($"\n不是签名页,跳过");
+                    continue;
+                }
+
                 Console.WriteLine($"\n[{i + 1}/{totalImages}] 正在识别：{fileName}");
                 Console.WriteLine($"文件路径：{imagePath}");
-
 
                 //using Stream imageStream = ReadLocalFileToStream(imagePath);
 
@@ -2215,13 +2243,16 @@ namespace Test
             await ExtractSignatureAreas(ocrResults, imagePath);
 
             //// 生成HTML文件
-            //string htmlContent = GenerateOCRVisualizationHTML(base64Image, ocrResults);
+            string htmlContent = GenerateOCRVisualizationHTML(base64Image, ocrResults);
 
-            //// 保存HTML文件
-            //string htmlFilePath = Path.Combine(Path.GetDirectoryName(imagePath), "ocr_visualization.html");
-            //File.WriteAllText(htmlFilePath, htmlContent);
+            // 保存HTML文件
 
-            //Console.WriteLine($"OCR可视化文件已保存: {htmlFilePath}");
+            string FileName= Path.GetFileNameWithoutExtension(imagePath);
+
+            string htmlFilePath = Path.Combine(Path.GetDirectoryName(imagePath), $"{FileName}-ocr.html");
+            File.WriteAllText(htmlFilePath, htmlContent);
+
+            Console.WriteLine($"OCR可视化文件已保存: {htmlFilePath}");
 
             //// 打开HTML文件
             //System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
@@ -2392,6 +2423,7 @@ namespace Test
             {
                 signatureAreas.PatientSignatureArea = patientSignatureArea;
                 Console.WriteLine($"找到病人签名区域: {patientSignatureArea.FilePath}");
+                Console.WriteLine("病人签名是否含有签名：" + HasHandwrittenSignaturePrecise(patientSignatureArea.FilePath));
             }
             else
             {
@@ -2404,6 +2436,7 @@ namespace Test
             {
                 signatureAreas.DoctorSignatureArea = doctorSignatureArea;
                 Console.WriteLine($"找到医生签名区域: {doctorSignatureArea.FilePath}");
+                Console.WriteLine("医生签名是否含有签名：" + HasHandwrittenSignaturePrecise(doctorSignatureArea.FilePath));
             }
             else
             {
@@ -2426,7 +2459,7 @@ namespace Test
             "病人/親屬/監護人/獲授權人士署",
             "病人/親/監護人/獲授權人士簽署",
             "病人/親屬/護人/獲授權人士簽署"
-        };
+            };
 
             // 查找匹配的文本
             var signatureText = ocrResults.FirstOrDefault(r =>
@@ -2458,7 +2491,7 @@ namespace Test
             "醫生策署",
             "醫生簽",
             "醫生署"
-        };
+            };
 
             //// 查找医生签名文本
             //var doctorSignatureText = ocrResults.FirstOrDefault(r =>
@@ -2480,9 +2513,6 @@ namespace Test
 
             foreach (var item in doctorSignatureText)
             {
-
-
-
                 Console.WriteLine($"找到医生签名文本: {item.Text}");
 
                 // 查找辅助标记：Doctor'sSignature
@@ -2663,7 +2693,9 @@ namespace Test
                 string outputDir = Path.Combine(Path.GetDirectoryName(imagePath), "signature_areas");
                 Directory.CreateDirectory(outputDir);
 
-                string outputPath = Path.Combine(outputDir, $"{prefix}_{DateTime.Now:yyyyMMddHHmmss}.jpg");
+                //string outputPath = Path.Combine(outputDir, $"{prefix}_{DateTime.Now:yyyyMMddHHmmss}.jpg");
+                string FileName= Path.GetFileNameWithoutExtension(imagePath);
+                string outputPath = Path.Combine(outputDir, $"{prefix}-{FileName}.jpg");
                 await croppedImage.SaveAsJpegAsync(outputPath);
 
                 return new SignatureArea
@@ -2790,6 +2822,1007 @@ namespace Test
             return (double)matches / Math.Max(text1.Length, text2.Length);
         }
 
+
+        /// <summary>
+        /// 判断是否有签名
+        /// </summary>
+        /// <param name="imageStream"></param>
+        /// <returns></returns>
+        public static bool HasHandwrittenSignatureOld(string imageFilePath)
+        {
+            using Stream imageStream = ReadLocalFileToStream(imageFilePath);
+            const float minPixelRatio = 0.005f;   // 最小像素占比
+            const int minComponentSize = 30;      // 最小连通区域像素数
+            const int maxLineWidth = 5;           // 最大允许的“线状”宽度（防横线/竖线）
+            const byte colorThreshold = 240;      // 暗色阈值
+
+            try
+            {
+                using var image = Image.Load<Rgba32>(imageStream);
+                if (image.Width == 0 || image.Height == 0) return false;
+
+                // 转灰度
+                var grayImage = image.Clone();
+                grayImage.Mutate(x => x.Grayscale());
+
+                // 收集所有暗像素
+                var blackPixels = new HashSet<(int X, int Y)>();
+                for (int y = 0; y < grayImage.Height; y++)
+                {
+                    for (int x = 0; x < grayImage.Width; x++)
+                    {
+                        if (grayImage[x, y].R <= colorThreshold)
+                        {
+                            blackPixels.Add((x, y));
+                        }
+                    }
+                }
+
+                if (blackPixels.Count == 0) return false;
+
+                float ratio = (float)blackPixels.Count / (image.Width * image.Height);
+                if (ratio < minPixelRatio) return false;
+
+                // 连通域分析 + 形状判断
+                var visited = new HashSet<(int, int)>();
+                foreach (var pixel in blackPixels)
+                {
+                    if (visited.Contains(pixel)) continue;
+
+                    // BFS 获取整个连通区域
+                    var component = new List<(int X, int Y)>();
+                    var queue = new Queue<(int, int)>();
+                    queue.Enqueue(pixel);
+                    visited.Add(pixel);
+
+                    while (queue.Count > 0)
+                    {
+                        var (x, y) = queue.Dequeue();
+                        component.Add((x, y));
+
+                        foreach (var neighbor in new[] { (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1) })
+                        {
+                            if (blackPixels.Contains(neighbor) && !visited.Contains(neighbor))
+                            {
+                                visited.Add(neighbor);
+                                queue.Enqueue(neighbor);
+                            }
+                        }
+                    }
+
+                    // 跳过太小的区域
+                    if (component.Count < minComponentSize) continue;
+
+                    // 计算包围盒
+                    int minX = component.Min(p => p.X);
+                    int maxX = component.Max(p => p.X);
+                    int minY = component.Min(p => p.Y);
+                    int maxY = component.Max(p => p.Y);
+
+                    int width = maxX - minX + 1;
+                    int height = maxY - minY + 1;
+
+                    // ❌ 排除“细长线”：比如横线（height <= maxLineWidth）或竖线（width <= maxLineWidth）
+                    if (width >= 3 * height && height <= maxLineWidth) continue; // 横线
+                    if (height >= 3 * width && width <= maxLineWidth) continue; // 竖线
+
+                    // ✅ 如果有一个区域既不小，又不是细线 → 很可能是签名
+                    return true;
+                }
+
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 判断是否有签名
+        /// </summary>
+        /// <param name="imageStream"></param>
+        /// <returns></returns>
+        public static bool HasHandwrittenSignature(string imageFilePath)
+        {
+            using Stream imageStream = ReadLocalFileToStream(imageFilePath);
+            const float minInkRatio = 0.002f;   // 最小墨迹占比（0.2%）
+            const int minInkPixels = 30;        // 最少墨迹像素数
+            const int maxLineWidth = 4;         // 最大允许的“线高”（防下划线）
+            const byte darkThreshold = 240;     // RGB < 240 视为墨迹
+
+            try
+            {
+                using var image = Image.Load<Rgba32>(imageStream);
+                if (image.Width <= 1 || image.Height <= 1) return false;
+
+                int totalPixels = image.Width * image.Height;
+                var inkPixels = new List<(int X, int Y)>();
+
+                // 收集所有墨迹像素（支持彩色签名）
+                for (int y = 0; y < image.Height; y++)
+                {
+                    for (int x = 0; x < image.Width; x++)
+                    {
+                        var p = image[x, y];
+                        if (p.R < darkThreshold || p.G < darkThreshold || p.B < darkThreshold)
+                        {
+                            inkPixels.Add((x, y));
+                        }
+                    }
+                }
+
+                // 条件1: 墨迹太少 → 无签名
+                if (inkPixels.Count < minInkPixels ||
+                    (float)inkPixels.Count / totalPixels < minInkRatio)
+                {
+                    return false;
+                }
+
+                // 条件2: 计算墨迹在垂直方向的分布（行投影）
+                var rowCounts = new int[image.Height];
+                foreach (var (x, y) in inkPixels)
+                {
+                    rowCounts[y]++;
+                }
+
+                // 找出有墨迹的行
+                var nonEmptyRows = rowCounts.Where(c => c > 0).ToArray();
+                if (nonEmptyRows.Length == 0) return false;
+
+                // 如果墨迹集中在 ≤2 行，且每行都很长 → 很可能是文字或横线
+                if (nonEmptyRows.Length <= 2)
+                {
+                    // 检查是否有“长线”：任一行墨迹占比 > 30%
+                    foreach (int count in nonEmptyRows)
+                    {
+                        if ((float)count / image.Width > 0.3f)
+                        {
+                            return false; // 是横线或文字行
+                        }
+                    }
+                }
+
+                // 条件3: 连通域分析 —— 必须有一个“非细长”的大区域
+                var visited = new HashSet<(int, int)>();
+                bool hasCompactRegion = false;
+
+                foreach (var pixel in inkPixels)
+                {
+                    if (visited.Contains(pixel)) continue;
+
+                    // BFS 获取连通区域
+                    var component = new List<(int, int)>();
+                    var queue = new Queue<(int, int)>();
+                    queue.Enqueue(pixel);
+                    visited.Add(pixel);
+
+                    while (queue.Count > 0)
+                    {
+                        var (x, y) = queue.Dequeue();
+                        component.Add((x, y));
+
+                        foreach (var nb in new[] { (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1) })
+                        {
+                            if (inkPixels.Contains(nb) && !visited.Contains(nb))
+                            {
+                                visited.Add(nb);
+                                queue.Enqueue(nb);
+                            }
+                        }
+                    }
+
+                    if (component.Count < 15) continue;
+
+                    // 计算包围盒
+                    int minX = component.Min(p => p.Item1);
+                    int maxX = component.Max(p => p.Item1);
+                    int minY = component.Min(p => p.Item2);
+                    int maxY = component.Max(p => p.Item2);
+                    int width = maxX - minX + 1;
+                    int height = maxY - minY + 1;
+
+                    // 排除细长区域（横线/竖线）
+                    if (height <= maxLineWidth && width > height * 3) continue;
+                    if (width <= maxLineWidth && height > width * 3) continue;
+
+                    // ✅ 找到一个紧凑区域 → 很可能是签名
+                    hasCompactRegion = true;
+                    break;
+                }
+
+                return hasCompactRegion;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+
+        /// <summary>
+        /// 改进版签名检测方法
+        /// </summary>
+        public static bool HasHandwrittenSignatureImproved(string imageFilePath)
+        {
+            using Stream imageStream = ReadLocalFileToStream(imageFilePath);
+            const float minInkRatio = 0.0015f;   // 降低墨迹占比要求
+            const int minInkPixels = 20;         // 降低最小像素数
+            const byte darkThreshold = 200;      // 降低阈值，适应浅色签名
+            const int maxLineWidth = 3;          // 更严格的线宽检测
+
+            try
+            {
+                using var image = Image.Load<Rgba32>(imageStream);
+                if (image.Width <= 1 || image.Height <= 1) return false;
+
+                int totalPixels = image.Width * image.Height;
+                var inkPixels = new List<(int X, int Y)>();
+
+                // 改进的墨迹检测：考虑灰度值
+                for (int y = 0; y < image.Height; y++)
+                {
+                    for (int x = 0; x < image.Width; x++)
+                    {
+                        var p = image[x, y];
+                        // 计算灰度值：0.299R + 0.587G + 0.114B
+                        byte grayValue = (byte)(0.299 * p.R + 0.587 * p.G + 0.114 * p.B);
+                        if (grayValue < darkThreshold)
+                        {
+                            inkPixels.Add((x, y));
+                        }
+                    }
+                }
+
+                // 基础条件检查
+                if (inkPixels.Count < minInkPixels || 
+                    (float)inkPixels.Count / totalPixels < minInkRatio)
+                {
+                    return false;
+                }
+
+                // 改进的连通域分析：使用8邻域
+                var visited = new HashSet<(int, int)>();
+                bool hasValidSignature = false;
+
+                foreach (var pixel in inkPixels)
+                {
+                    if (visited.Contains(pixel)) continue;
+
+                    // 8邻域BFS
+                    var component = new List<(int, int)>();
+                    var queue = new Queue<(int, int)>();
+                    queue.Enqueue(pixel);
+                    visited.Add(pixel);
+
+                    while (queue.Count > 0)
+                    {
+                        var (x, y) = queue.Dequeue();
+                        component.Add((x, y));
+
+                        // 8方向邻域
+                        foreach (var nb in new[] { 
+                            (x+1, y), (x-1, y), (x, y+1), (x, y-1),
+                            (x+1, y+1), (x+1, y-1), (x-1, y+1), (x-1, y-1)
+                        })
+                        {
+                            if (nb.Item1 >= 0 && nb.Item1 < image.Width && 
+                                nb.Item2 >= 0 && nb.Item2 < image.Height &&
+                                inkPixels.Contains(nb) && !visited.Contains(nb))
+                            {
+                                visited.Add(nb);
+                                queue.Enqueue(nb);
+                            }
+                        }
+                    }
+
+                    if (component.Count < 15) continue;
+
+                    // 计算包围盒和形状特征
+                    int minX = component.Min(p => p.Item1);
+                    int maxX = component.Max(p => p.Item1);
+                    int minY = component.Min(p => p.Item2);
+                    int maxY = component.Max(p => p.Item2);
+                    int width = maxX - minX + 1;
+                    int height = maxY - minY + 1;
+
+                    // 排除细长线
+                    if ((height <= maxLineWidth && width > height * 4) || 
+                        (width <= maxLineWidth && height > width * 4))
+                        continue;
+
+                    // 计算紧凑度：面积/(包围盒面积)
+                    float compactness = (float)component.Count / (width * height);
+                    
+                    // 签名通常有中等紧凑度（0.1-0.6）
+                    if (compactness > 0.05f && compactness < 0.8f)
+                    {
+                        hasValidSignature = true;
+                        break;
+                    }
+                }
+
+                return hasValidSignature;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+
+        /// <summary>
+        /// 精准签名检测 - 专门针对裁剪图片优化
+        /// </summary>
+        public static bool HasHandwrittenSignaturePreciseold(string imageFilePath)
+        {
+            using Stream imageStream = ReadLocalFileToStream(imageFilePath);
+            const float minInkRatio = 0.003f;    // 提高墨迹占比要求
+            const int minInkPixels = 25;         // 提高最小像素数
+            const byte darkThreshold = 180;      // 更严格的阈值
+            const int maxLineWidth = 2;          // 更严格的线宽检测
+
+            try
+            {
+                using var image = Image.Load<Rgba32>(imageStream);
+                if (image.Width <= 10 || image.Height <= 10) return false;
+
+                int totalPixels = image.Width * image.Height;
+                var inkPixels = new List<(int X, int Y)>();
+
+                // 预处理：先进行高斯模糊减少噪声
+                using var processedImage = image.Clone();
+                processedImage.Mutate(x => x.GaussianBlur(0.8f));
+
+                // 改进的墨迹检测：考虑局部对比度
+                for (int y = 1; y < processedImage.Height - 1; y++)
+                {
+                    for (int x = 1; x < processedImage.Width - 1; x++)
+                    {
+                        var p = processedImage[x, y];
+                        byte grayValue = (byte)(0.299 * p.R + 0.587 * p.G + 0.114 * p.B);
+
+                        // 检查是否为真正的暗像素（不是噪声）
+                        if (grayValue < darkThreshold)
+                        {
+                            // 检查周围像素的对比度（避免孤立噪声点）
+                            int darkNeighbors = 0;
+                            for (int dy = -1; dy <= 1; dy++)
+                            {
+                                for (int dx = -1; dx <= 1; dx++)
+                                {
+                                    if (dx == 0 && dy == 0) continue;
+                                    var neighbor = processedImage[x + dx, y + dy];
+                                    byte neighborGray = (byte)(0.299 * neighbor.R + 0.587 * neighbor.G + 0.114 * neighbor.B);
+                                    if (neighborGray < darkThreshold + 30) // 稍微宽松的邻居阈值
+                                        darkNeighbors++;
+                                }
+                            }
+
+                            // 至少有2个暗邻居才认为是有效墨迹
+                            if (darkNeighbors >= 2)
+                            {
+                                inkPixels.Add((x, y));
+                            }
+                        }
+                    }
+                }
+
+                // 基础条件检查（更严格）
+                if (inkPixels.Count < minInkPixels ||
+                    (float)inkPixels.Count / totalPixels < minInkRatio)
+                {
+                    return false;
+                }
+
+                // 分析墨迹分布特征
+                var rowDensity = new int[processedImage.Height];
+                var colDensity = new int[processedImage.Width];
+
+                foreach (var (x, y) in inkPixels)
+                {
+                    rowDensity[y]++;
+                    colDensity[x]++;
+                }
+
+                // 检查是否为规则的文字行（排除印刷文字）
+                var nonEmptyRows = rowDensity.Where(c => c > 0).ToArray();
+                if (nonEmptyRows.Length > 0)
+                {
+                    // 计算行的密度变化（签名通常密度变化大，文字行变化小）
+                    float densityVariation = (float)nonEmptyRows.Max() / Math.Max(nonEmptyRows.Min(), 1);
+                    if (densityVariation < 3.0f && nonEmptyRows.Length >= 3)
+                    {
+                        // 密度变化小且有多行 → 可能是文字
+                        return false;
+                    }
+                }
+
+                // 连通域分析（更严格的条件）
+                var visited = new HashSet<(int, int)>();
+                bool hasValidSignature = false;
+                int validComponents = 0;
+
+                foreach (var pixel in inkPixels)
+                {
+                    if (visited.Contains(pixel)) continue;
+
+                    // 8邻域BFS
+                    var component = new List<(int, int)>();
+                    var queue = new Queue<(int, int)>();
+                    queue.Enqueue(pixel);
+                    visited.Add(pixel);
+
+                    while (queue.Count > 0)
+                    {
+                        var (x, y) = queue.Dequeue();
+                        component.Add((x, y));
+
+                        foreach (var nb in new[] {
+                            (x+1, y), (x-1, y), (x, y+1), (x, y-1),
+                            (x+1, y+1), (x+1, y-1), (x-1, y+1), (x-1, y-1)
+                        })
+                        {
+                            if (nb.Item1 >= 0 && nb.Item1 < processedImage.Width &&
+                                nb.Item2 >= 0 && nb.Item2 < processedImage.Height &&
+                                inkPixels.Contains(nb) && !visited.Contains(nb))
+                            {
+                                visited.Add(nb);
+                                queue.Enqueue(nb);
+                            }
+                        }
+                    }
+
+                    if (component.Count < 20) continue; // 提高最小组件大小
+
+                    // 计算形状特征
+                    int minX = component.Min(p => p.Item1);
+                    int maxX = component.Max(p => p.Item1);
+                    int minY = component.Min(p => p.Item2);
+                    int maxY = component.Max(p => p.Item2);
+                    int width = maxX - minX + 1;
+                    int height = maxY - minY + 1;
+
+                    // 排除细长线（更严格）
+                    if ((height <= maxLineWidth && width > height * 5) ||
+                        (width <= maxLineWidth && height > width * 5))
+                        continue;
+
+                    // 计算紧凑度和复杂度
+                    float compactness = (float)component.Count / (width * height);
+                    float aspectRatio = (float)width / Math.Max(height, 1);
+
+                    // 签名特征：
+                    // - 紧凑度适中（0.1-0.6）
+                    // - 宽高比适中（0.5-3.0）
+                    // - 不是完美的圆形或方形
+                    if (compactness > 0.08f && compactness < 0.7f &&
+                        aspectRatio > 0.4f && aspectRatio < 4.0f)
+                    {
+                        validComponents++;
+                        if (validComponents >= 1) // 至少有一个有效组件
+                        {
+                            hasValidSignature = true;
+                            break;
+                        }
+                    }
+                }
+
+                // 添加调试输出
+                Console.WriteLine($"图片尺寸: {image.Width}x{image.Height}");
+                Console.WriteLine($"墨迹像素数: {inkPixels.Count}");
+                Console.WriteLine($"墨迹占比: {(float)inkPixels.Count / totalPixels:P2}");
+                Console.WriteLine($"有效组件数: {validComponents}");
+
+                return hasValidSignature;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+
+        /// <summary>
+        /// 精准签名检测 - 专门针对裁剪图片优化，排除底部线条
+        /// </summary>
+        public static bool HasHandwrittenSignaturePreciseOld(string imageFilePath)
+        {
+            using Stream imageStream = ReadLocalFileToStream(imageFilePath);
+            const float minInkRatio = 0.003f;    // 提高墨迹占比要求
+            const int minInkPixels = 25;         // 提高最小像素数
+            const byte darkThreshold = 180;      // 更严格的阈值
+            const int maxLineWidth = 2;          // 更严格的线宽检测
+            const float bottomExclusionRatio = 0.15f; // 排除底部15%区域
+
+            try
+            {
+                using var image = Image.Load<Rgba32>(imageStream);
+                if (image.Width <= 10 || image.Height <= 10) return false;
+
+                int totalPixels = image.Width * image.Height;
+                var inkPixels = new List<(int X, int Y)>();
+
+                // 预处理：先进行高斯模糊减少噪声
+                using var processedImage = image.Clone();
+                processedImage.Mutate(x => x.GaussianBlur(0.8f));
+
+                // 计算底部排除区域
+                int bottomExclusionStart = (int)(image.Height * (1 - bottomExclusionRatio));
+
+                // 改进的墨迹检测：考虑局部对比度，排除底部区域
+                for (int y = 1; y < processedImage.Height - 1; y++)
+                {
+                    // 跳过底部15%区域（避免底部线条干扰）
+                    if (y >= bottomExclusionStart) continue;
+
+                    for (int x = 1; x < processedImage.Width - 1; x++)
+                    {
+                        var p = processedImage[x, y];
+                        byte grayValue = (byte)(0.299 * p.R + 0.587 * p.G + 0.114 * p.B);
+
+                        // 检查是否为真正的暗像素（不是噪声）
+                        if (grayValue < darkThreshold)
+                        {
+                            // 检查周围像素的对比度（避免孤立噪声点）
+                            int darkNeighbors = 0;
+                            for (int dy = -1; dy <= 1; dy++)
+                            {
+                                for (int dx = -1; dx <= 1; dx++)
+                                {
+                                    if (dx == 0 && dy == 0) continue;
+                                    var neighbor = processedImage[x + dx, y + dy];
+                                    byte neighborGray = (byte)(0.299 * neighbor.R + 0.587 * neighbor.G + 0.114 * neighbor.B);
+                                    if (neighborGray < darkThreshold + 30) // 稍微宽松的邻居阈值
+                                        darkNeighbors++;
+                                }
+                            }
+
+                            // 至少有2个暗邻居才认为是有效墨迹
+                            if (darkNeighbors >= 2)
+                            {
+                                inkPixels.Add((x, y));
+                            }
+                        }
+                    }
+                }
+
+                // 基础条件检查（更严格）
+                if (inkPixels.Count < minInkPixels ||
+                    (float)inkPixels.Count / totalPixels < minInkRatio)
+                {
+                    return false;
+                }
+
+                // 分析墨迹分布特征（排除底部区域后）
+                var rowDensity = new int[processedImage.Height];
+                var colDensity = new int[processedImage.Width];
+
+                foreach (var (x, y) in inkPixels)
+                {
+                    rowDensity[y]++;
+                    colDensity[x]++;
+                }
+
+                // 检查墨迹是否主要集中在底部（如果是，可能是线条）
+                int topHalfPixels = 0;
+                int bottomHalfPixels = 0;
+                int middleY = processedImage.Height / 2;
+
+                foreach (var (x, y) in inkPixels)
+                {
+                    if (y < middleY) topHalfPixels++;
+                    else bottomHalfPixels++;
+                }
+
+                // 如果底部像素占比过高（>80%），可能是底部线条
+                if (bottomHalfPixels > 0 && (float)bottomHalfPixels / (topHalfPixels + bottomHalfPixels) > 0.8f)
+                {
+                    return false;
+                }
+
+                // 检查是否为规则的文字行（排除印刷文字）
+                var nonEmptyRows = rowDensity.Where(c => c > 0).ToArray();
+                if (nonEmptyRows.Length > 0)
+                {
+                    // 计算行的密度变化（签名通常密度变化大，文字行变化小）
+                    float densityVariation = (float)nonEmptyRows.Max() / Math.Max(nonEmptyRows.Min(), 1);
+                    if (densityVariation < 3.0f && nonEmptyRows.Length >= 3)
+                    {
+                        // 密度变化小且有多行 → 可能是文字
+                        return false;
+                    }
+                }
+
+                // 连通域分析（更严格的条件）
+                var visited = new HashSet<(int, int)>();
+                bool hasValidSignature = false;
+                int validComponents = 0;
+
+                foreach (var pixel in inkPixels)
+                {
+                    if (visited.Contains(pixel)) continue;
+
+                    // 8邻域BFS
+                    var component = new List<(int, int)>();
+                    var queue = new Queue<(int, int)>();
+                    queue.Enqueue(pixel);
+                    visited.Add(pixel);
+
+                    while (queue.Count > 0)
+                    {
+                        var (x, y) = queue.Dequeue();
+                        component.Add((x, y));
+
+                        foreach (var nb in new[] {
+                            (x+1, y), (x-1, y), (x, y+1), (x, y-1),
+                            (x+1, y+1), (x+1, y-1), (x-1, y+1), (x-1, y-1)
+                        })
+                        {
+                            if (nb.Item1 >= 0 && nb.Item1 < processedImage.Width &&
+                                nb.Item2 >= 0 && nb.Item2 < processedImage.Height &&
+                                inkPixels.Contains(nb) && !visited.Contains(nb))
+                            {
+                                visited.Add(nb);
+                                queue.Enqueue(nb);
+                            }
+                        }
+                    }
+
+                    if (component.Count < 20) continue; // 提高最小组件大小
+
+                    // 计算形状特征
+                    int minX = component.Min(p => p.Item1);
+                    int maxX = component.Max(p => p.Item1);
+                    int minY = component.Min(p => p.Item2);
+                    int maxY = component.Max(p => p.Item2);
+                    int width = maxX - minX + 1;
+                    int height = maxY - minY + 1;
+
+                    // 排除细长线（更严格）
+                    if ((height <= maxLineWidth && width > height * 5) ||
+                        (width <= maxLineWidth && height > width * 5))
+                        continue;
+
+                    // 检查组件是否在底部区域（如果是，可能是线条）
+                    if (minY >= bottomExclusionStart)
+                    {
+                        continue; // 跳过底部区域的组件
+                    }
+
+                    // 计算紧凑度和复杂度
+                    float compactness = (float)component.Count / (width * height);
+                    float aspectRatio = (float)width / Math.Max(height, 1);
+
+                    // 签名特征：
+                    // - 紧凑度适中（0.1-0.6）
+                    // - 宽高比适中（0.5-3.0）
+                    // - 不是完美的圆形或方形
+                    if (compactness > 0.08f && compactness < 0.7f &&
+                        aspectRatio > 0.4f && aspectRatio < 4.0f)
+                    {
+                        validComponents++;
+                        if (validComponents >= 1) // 至少有一个有效组件
+                        {
+                            hasValidSignature = true;
+                            break;
+                        }
+                    }
+                }
+
+                // 添加调试输出
+                Console.WriteLine($"图片尺寸: {image.Width}x{image.Height}");
+                Console.WriteLine($"墨迹像素数: {inkPixels.Count}");
+                Console.WriteLine($"墨迹占比: {(float)inkPixels.Count / totalPixels:P2}");
+                Console.WriteLine($"有效组件数: {validComponents}");
+
+                return hasValidSignature;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+
+         /// <summary>
+        /// 精准签名检测 - 专门针对裁剪图片优化，排除底部线条和印刷文字
+        /// </summary>
+        public static bool HasHandwrittenSignaturePrecise(string imageFilePath)
+        {
+            using Stream imageStream = ReadLocalFileToStream(imageFilePath);
+            const float minInkRatio = 0.003f;    // 提高墨迹占比要求
+            const int minInkPixels = 25;         // 提高最小像素数
+            const byte darkThreshold = 180;      // 更严格的阈值
+            const int maxLineWidth = 2;          // 更严格的线宽检测
+            const float bottomExclusionRatio = 0.15f; // 排除底部15%区域
+
+            try
+            {
+                using var image = Image.Load<Rgba32>(imageStream);
+                if (image.Width <= 10 || image.Height <= 10) return false;
+
+                int totalPixels = image.Width * image.Height;
+                var inkPixels = new List<(int X, int Y)>();
+
+                // 预处理：先进行高斯模糊减少噪声
+                using var processedImage = image.Clone();
+                processedImage.Mutate(x => x.GaussianBlur(0.8f));
+
+                // 计算底部排除区域
+                int bottomExclusionStart = (int)(image.Height * (1 - bottomExclusionRatio));
+
+                // 改进的墨迹检测：考虑局部对比度，排除底部区域
+                for (int y = 1; y < processedImage.Height - 1; y++)
+                {
+                    // 跳过底部15%区域（避免底部线条干扰）
+                    if (y >= bottomExclusionStart) continue;
+
+                    for (int x = 1; x < processedImage.Width - 1; x++)
+                    {
+                        var p = processedImage[x, y];
+                        byte grayValue = (byte)(0.299 * p.R + 0.587 * p.G + 0.114 * p.B);
+                        
+                        // 检查是否为真正的暗像素（不是噪声）
+                        if (grayValue < darkThreshold)
+                        {
+                            // 检查周围像素的对比度（避免孤立噪声点）
+                            int darkNeighbors = 0;
+                            for (int dy = -1; dy <= 1; dy++)
+                            {
+                                for (int dx = -1; dx <= 1; dx++)
+                                {
+                                    if (dx == 0 && dy == 0) continue;
+                                    var neighbor = processedImage[x + dx, y + dy];
+                                    byte neighborGray = (byte)(0.299 * neighbor.R + 0.587 * neighbor.G + 0.114 * neighbor.B);
+                                    if (neighborGray < darkThreshold + 30) // 稍微宽松的邻居阈值
+                                        darkNeighbors++;
+                                }
+                            }
+                            
+                            // 至少有2个暗邻居才认为是有效墨迹
+                            if (darkNeighbors >= 2)
+                            {
+                                inkPixels.Add((x, y));
+                            }
+                        }
+                    }
+                }
+
+                // 基础条件检查（更严格）
+                if (inkPixels.Count < minInkPixels || 
+                    (float)inkPixels.Count / totalPixels < minInkRatio)
+                {
+                    return false;
+                }
+
+                // 分析墨迹分布特征（排除底部区域后）
+                var rowDensity = new int[processedImage.Height];
+                var colDensity = new int[processedImage.Width];
+                
+                foreach (var (x, y) in inkPixels)
+                {
+                    rowDensity[y]++;
+                    colDensity[x]++;
+                }
+
+                // 检查墨迹是否主要集中在底部（如果是，可能是线条）
+                int topHalfPixels = 0;
+                int bottomHalfPixels = 0;
+                int middleY = processedImage.Height / 2;
+                
+                foreach (var (x, y) in inkPixels)
+                {
+                    if (y < middleY) topHalfPixels++;
+                    else bottomHalfPixels++;
+                }
+
+                // 如果底部像素占比过高（>80%），可能是底部线条
+                if (bottomHalfPixels > 0 && (float)bottomHalfPixels / (topHalfPixels + bottomHalfPixels) > 0.8f)
+                {
+                    return false;
+                }
+
+                // 印刷文字检测：检查墨迹分布是否过于规则
+                if (IsPrintedText(inkPixels, processedImage.Width, processedImage.Height))
+                {
+                    return false;
+                }
+
+                // 连通域分析（更严格的条件）
+                var visited = new HashSet<(int, int)>();
+                bool hasValidSignature = false;
+                int validComponents = 0;
+
+                foreach (var pixel in inkPixels)
+                {
+                    if (visited.Contains(pixel)) continue;
+
+                    // 8邻域BFS
+                    var component = new List<(int, int)>();
+                    var queue = new Queue<(int, int)>();
+                    queue.Enqueue(pixel);
+                    visited.Add(pixel);
+
+                    while (queue.Count > 0)
+                    {
+                        var (x, y) = queue.Dequeue();
+                        component.Add((x, y));
+
+                        foreach (var nb in new[] { 
+                            (x+1, y), (x-1, y), (x, y+1), (x, y-1),
+                            (x+1, y+1), (x+1, y-1), (x-1, y+1), (x-1, y-1)
+                        })
+                        {
+                            if (nb.Item1 >= 0 && nb.Item1 < processedImage.Width && 
+                                nb.Item2 >= 0 && nb.Item2 < processedImage.Height &&
+                                inkPixels.Contains(nb) && !visited.Contains(nb))
+                            {
+                                visited.Add(nb);
+                                queue.Enqueue(nb);
+                            }
+                        }
+                    }
+
+                    if (component.Count < 20) continue; // 提高最小组件大小
+
+                    // 计算形状特征
+                    int minX = component.Min(p => p.Item1);
+                    int maxX = component.Max(p => p.Item1);
+                    int minY = component.Min(p => p.Item2);
+                    int maxY = component.Max(p => p.Item2);
+                    int width = maxX - minX + 1;
+                    int height = maxY - minY + 1;
+
+                    // 排除细长线（更严格）
+                    if ((height <= maxLineWidth && width > height * 5) || 
+                        (width <= maxLineWidth && height > width * 5))
+                        continue;
+
+                    // 检查组件是否在底部区域（如果是，可能是线条）
+                    if (minY >= bottomExclusionStart)
+                    {
+                        continue; // 跳过底部区域的组件
+                    }
+
+                    // 计算紧凑度和复杂度
+                    float compactness = (float)component.Count / (width * height);
+                    float aspectRatio = (float)width / Math.Max(height, 1);
+                    
+                    // 签名特征：
+                    // - 紧凑度适中（0.1-0.6）
+                    // - 宽高比适中（0.5-3.0）
+                    // - 不是完美的圆形或方形
+                    if (compactness > 0.08f && compactness < 0.7f &&
+                        aspectRatio > 0.4f && aspectRatio < 4.0f)
+                    {
+                        validComponents++;
+                        if (validComponents >= 1) // 至少有一个有效组件
+                        {
+                            hasValidSignature = true;
+                            break;
+                        }
+                    }
+                }
+
+                // 添加详细的调试输出
+                Console.WriteLine($"图片尺寸: {image.Width}x{image.Height}");
+                Console.WriteLine($"有效墨迹像素数: {inkPixels.Count}");
+                Console.WriteLine($"墨迹占比: {(float)inkPixels.Count / totalPixels:P2}");
+                Console.WriteLine($"印刷文字检测: {IsPrintedText(inkPixels, image.Width, image.Height)}");
+                Console.WriteLine($"有效组件数: {validComponents}");
+
+                return hasValidSignature;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 检测是否为印刷文字（规则排列的墨迹）
+        /// </summary>
+        private static bool IsPrintedText(List<(int X, int Y)> inkPixels, int imageWidth, int imageHeight)
+        {
+            if (inkPixels.Count < 50) return false; // 文字通常有较多像素
+
+            // 分析行间距和列间距的规律性
+            var rows = inkPixels.GroupBy(p => p.Y).OrderBy(g => g.Key).ToList();
+            var cols = inkPixels.GroupBy(p => p.X).OrderBy(g => g.Key).ToList();
+
+            // 检查是否有明显的行结构
+            if (rows.Count >= 3)
+            {
+                // 计算行间距的规律性
+                var rowSpacings = new List<int>();
+                for (int i = 1; i < rows.Count; i++)
+                {
+                    rowSpacings.Add(rows[i].Key - rows[i - 1].Key);
+                }
+
+                // 如果行间距相对均匀（变异系数小），可能是文字
+                if (rowSpacings.Count >= 2)
+                {
+                    double avgSpacing = rowSpacings.Average();
+                    double stdDev = Math.Sqrt(rowSpacings.Select(s => Math.Pow(s - avgSpacing, 2)).Average());
+                    double cv = stdDev / avgSpacing; // 变异系数
+
+                    if (cv < 0.3) // 行间距变异系数小于30%，说明很规则
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            // 检查是否有明显的列结构（字符间距）
+            if (cols.Count >= 10)
+            {
+                // 计算列间距的规律性
+                var colSpacings = new List<int>();
+                for (int i = 1; i < cols.Count; i++)
+                {
+                    colSpacings.Add(cols[i].Key - cols[i - 1].Key);
+                }
+
+                // 如果列间距相对均匀，可能是文字
+                if (colSpacings.Count >= 5)
+                {
+                    double avgSpacing = colSpacings.Average();
+                    double stdDev = Math.Sqrt(colSpacings.Select(s => Math.Pow(s - avgSpacing, 2)).Average());
+                    double cv = stdDev / avgSpacing;
+
+                    if (cv < 0.4) // 列间距变异系数小于40%
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            // 检查像素分布是否过于分散（文字通常有多个分散的组件）
+            var visited = new HashSet<(int, int)>();
+            int componentCount = 0;
+            int smallComponents = 0;
+
+            foreach (var pixel in inkPixels)
+            {
+                if (visited.Contains(pixel)) continue;
+
+                // BFS计算组件大小
+                var queue = new Queue<(int, int)>();
+                queue.Enqueue(pixel);
+                visited.Add(pixel);
+                int componentSize = 0;
+
+                while (queue.Count > 0)
+                {
+                    var (x, y) = queue.Dequeue();
+                    componentSize++;
+
+                    foreach (var nb in new[] { (x+1, y), (x-1, y), (x, y+1), (x, y-1) })
+                    {
+                        if (nb.Item1 >= 0 && nb.Item1 < imageWidth && 
+                            nb.Item2 >= 0 && nb.Item2 < imageHeight &&
+                            inkPixels.Contains(nb) && !visited.Contains(nb))
+                        {
+                            visited.Add(nb);
+                            queue.Enqueue(nb);
+                        }
+                    }
+                }
+
+                componentCount++;
+                if (componentSize < 10) smallComponents++;
+            }
+
+            // 如果有很多小组件（可能是字符），且组件数量较多，可能是文字
+            if (componentCount >= 5 && smallComponents >= componentCount * 0.6)
+            {
+                return true;
+            }
+
+            return false;
+        }
 
         #endregion 
     }
