@@ -2181,6 +2181,7 @@ namespace Test
 
 
             DateTime Pstarttime = DateTime.Now;
+            //string folderPath = @"C:\Users\liusi\Desktop\Form";
             string folderPath = @"C:\Users\liusi\Desktop\Form";
             // 检查文件夹是否存在
             if (!Directory.Exists(folderPath))
@@ -2247,7 +2248,6 @@ namespace Test
                     continue;
                 }
 
-
                 Console.WriteLine($"\n[{i + 1}/{totalImages}] 正在识别：{fileName}");
                 Console.WriteLine($"文件路径：{imagePath}");
 
@@ -2296,22 +2296,22 @@ namespace Test
 
             //Console.WriteLine(ocrResultJson);
 
+            //保存为本地文件
+
             // 解析OCR结果
             var ocrResults = JsonSerializer.Deserialize<List<OCRResult>>(ocrResultJson);
 
-            // 调用签名区域截取功能
-            await ExtractSignatureAreas(ocrResults, imagePath);
-
-            //// 生成HTML文件
-            string htmlContent = GenerateOCRVisualizationHTML(base64Image, ocrResults);
-
-            // 保存HTML文件
-
+            // 保存识别文件和HTML文件
             string FileName = Path.GetFileNameWithoutExtension(imagePath);
 
+            string JosonFilePath = Path.Combine(Path.GetDirectoryName(imagePath), $"{FileName}-ocr.json");
+            File.WriteAllText(JosonFilePath, ocrResultJson);
+            Console.WriteLine($"OCR识别文件已保存: {JosonFilePath}");
+
+            // 生成HTML文件
+            string htmlContent = GenerateOCRVisualizationHTML(base64Image, ocrResults);
             string htmlFilePath = Path.Combine(Path.GetDirectoryName(imagePath), $"{FileName}-ocr.html");
             File.WriteAllText(htmlFilePath, htmlContent);
-
             Console.WriteLine($"OCR可视化文件已保存: {htmlFilePath}");
 
             //// 打开HTML文件
@@ -2320,6 +2320,51 @@ namespace Test
             //    FileName = htmlFilePath,
             //    UseShellExecute = true
             //});
+
+
+            // 直接修改原始列表中的 Text 字段
+            foreach (var result in ocrResults)
+            {
+                if (result?.Text != null)
+                {
+                    result.Text = ToHalfWidth(result.Text);
+                }
+            }
+
+             // 调用签名区域截取功能
+            await ExtractSignatureAreas(ocrResults, imagePath);
+        }
+
+        //符号统一[全角转半角方法]
+        //／（U+FF0F） → /（U+002F）
+        //ＡＢＣ１２３ → ABC123
+        //！？＠＃ → !?@#
+        //全角空格 → 普通空格
+        public static string ToHalfWidth(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return input;
+
+            var result = new char[input.Length];
+            for (int i = 0; i < input.Length; i++)
+            {
+                char c = input[i];
+                // 全角数字、字母、标点 转 半角（范围 U+FF01 ~ U+FF5E 对应 U+0021 ~ U+007E）
+                if (c >= '\uFF01' && c <= '\uFF5E')
+                {
+                    result[i] = (char)(c - 0xFEE0);
+                }
+                // 全角空格 U+3000 → 半角空格 U+0020
+                else if (c == '\u3000')
+                {
+                    result[i] = ' ';
+                }
+                else
+                {
+                    result[i] = c;
+                }
+            }
+            return new string(result).Trim().Replace(" ", "").ToLower();
         }
 
         // OCR结果类
@@ -2365,7 +2410,7 @@ namespace Test
             html.AppendLine("    <div class=\"container\">");
             html.AppendLine("        <h1>OCR结果</h1>");
             html.AppendLine("        <div class=\"image-container\">");
-            html.AppendLine($"            <img src=\"data:image/jpeg;base64,{base64Image}\" alt=\"OCR图片\" style=\"max-width: 100%; height: auto;\">");
+            html.AppendLine($"            <img src=\"data:image/jpeg;base64,{base64Image}\" alt=\"OCR图片\" id=\"ocrImage\" style=\"max-width: 100%; height: auto;\">");
 
             // 添加OCR框和文本
             if (ocrResults != null && ocrResults.Count > 0)
@@ -2381,6 +2426,38 @@ namespace Test
                     // OCR文本（显示在框的上方）
                     html.AppendLine($"            <div class=\"ocr-text\" style=\"left: {result.Boundary.left}px; top: {result.Boundary.top - 20}px;\">{result.Text}</div>");
                 }
+
+                // JavaScript缩放代码应该放在所有框之后
+                html.AppendLine("            <script>");
+                html.AppendLine("                window.onload = function() {");
+                html.AppendLine("                    const image = document.getElementById('ocrImage');");
+                html.AppendLine("                    const container = document.getElementById('imageContainer');");
+                html.AppendLine("                    const imageWidth = image.naturalWidth;");
+                html.AppendLine("                    const imageHeight = image.naturalHeight;");
+                html.AppendLine("                    const displayWidth = image.offsetWidth;");
+                html.AppendLine("                    const displayHeight = image.offsetHeight;");
+                html.AppendLine("                    ");
+                html.AppendLine("                    // 计算缩放比例");
+                html.AppendLine("                    const scaleX = displayWidth / imageWidth;");
+                html.AppendLine("                    const scaleY = displayHeight / imageHeight;");
+                html.AppendLine("                    ");
+                html.AppendLine("                    // 调整所有OCR框的位置和大小");
+                html.AppendLine("                    const boxes = document.querySelectorAll('.ocr-box, .ocr-text');");
+                html.AppendLine("                    boxes.forEach(box => {");
+                html.AppendLine("                        const left = parseInt(box.style.left) * scaleX;");
+                html.AppendLine("                        const top = parseInt(box.style.top) * scaleY;");
+                html.AppendLine("                        const width = parseInt(box.style.width) * scaleX;");
+                html.AppendLine("                        const height = parseInt(box.style.height) * scaleY;");
+                html.AppendLine("                        ");
+                html.AppendLine("                        box.style.left = left + 'px';");
+                html.AppendLine("                        box.style.top = top + 'px';");
+                html.AppendLine("                        if (box.classList.contains('ocr-box')) {");
+                html.AppendLine("                            box.style.width = width + 'px';");
+                html.AppendLine("                            box.style.height = height + 'px';");
+                html.AppendLine("                        }");
+                html.AppendLine("                    });");
+                html.AppendLine("                };");
+                html.AppendLine("            </script>");
             }
 
             html.AppendLine("        </div>");
@@ -2526,8 +2603,8 @@ namespace Test
             // 查找匹配的文本
             var signatureText = ocrResults.FirstOrDefault(r =>
                 patientSignaturePatterns.Any(pattern =>
-                    r.Text.Contains(pattern) ||
-                    CalculateSimilarity(r.Text, pattern) > 0.7));
+                    r.Text.Contains(pattern.ToLower()) ||
+                    CalculateSimilarity(r.Text, pattern.ToLower()) > 0.7));
 
             if (signatureText == null)
             {
@@ -2630,8 +2707,8 @@ namespace Test
             // 查找医生签名文本
             var doctorSignatureText = ocrResults.Where(r =>
                 doctorSignaturePatterns.Any(pattern =>
-                    r.Text.Contains(pattern) ||
-                    CalculateSimilarity(r.Text, pattern) > 0.7)).ToList();
+                    r.Text.Contains(pattern.ToLower()) ||
+                    CalculateSimilarity(r.Text, pattern.ToLower()) > 0.7)).ToList();
 
             if (doctorSignatureText == null || doctorSignatureText.Count == 0)
             {
@@ -2642,14 +2719,14 @@ namespace Test
             // 查找所有Doctor'sSignature标记
             //var doctorSignatureMarkers = ocrResults.Where(r =>
             //    r.Text.Contains(formIdConfig.Doctor.BottomReferenceParameters)).ToList();
-            var doctorSignatureMarkers = ocrResults.Where(r => formIdConfig.Doctor.BottomReferenceParameters.Any(param => r.Text.Contains(param))).ToList();
+            var doctorSignatureMarkers = ocrResults.Where(r => formIdConfig.Doctor.BottomReferenceParameters.Any(param => r.Text.Contains(param.ToLower()))).ToList();
 
             // 查找所有醫生姓名标记
             //var doctorNameMarkers = ocrResults.Where(r =>
             //    r.Text.Contains(formIdConfig.Doctor.RightReferenceParameters)).ToList();
 
             //包含匹配，OCR识别可能存在细微差异。
-            var doctorNameMarkers = ocrResults.Where(r => formIdConfig.Doctor.RightReferenceParameters.Any(param => r.Text.Contains(param))).ToList();
+            var doctorNameMarkers = ocrResults.Where(r => formIdConfig.Doctor.RightReferenceParameters.Any(param => r.Text.Contains(param.ToLower()))).ToList();
 
             foreach (var item in doctorSignatureText)
             {
@@ -2659,8 +2736,8 @@ namespace Test
                 var sameLineDoctorName = doctorNameMarkers
                     .Where(marker =>
                         // 同一行检查：top和bottom基本一致
-                        Math.Abs(marker.Boundary.top - item.Boundary.top) < 10 &&
-                        Math.Abs(marker.Boundary.bottom - item.Boundary.bottom) < 10)
+                        Math.Abs(marker.Boundary.top - item.Boundary.top) < 50 &&
+                        Math.Abs(marker.Boundary.bottom - item.Boundary.bottom) < 50) //放宽到50像素
                     .FirstOrDefault();
 
                 // 查找在同一列的Doctor'sSignature标记
