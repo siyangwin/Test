@@ -31,6 +31,8 @@ namespace Test
             //string folderPath = @"C:\Users\liusi\Desktop\Form\check";
             //TestSignatureDetection(folderPath);
 
+            //Console.WriteLine(HasSignature("C:\\Users\\liusi\\Desktop\\signature\\doctor_signature-4b0dbda9-0bc2-4c65-b86d-021880a1ac6f.jpg"));
+
             Console.WriteLine();
             Console.ReadKey();
 
@@ -832,6 +834,18 @@ namespace Test
         #endregion
 
         #region zXING
+
+        // 创建可空类
+        public class QRCodeCheck
+        {
+            public string? EpisodeID { get; set; }
+            public string? QrCodeContent { get; set; }
+            public string? PatientID { get; set; }
+        }
+
+        //QrCode格式校验
+        static bool FormatCheck = true;
+
         public static void Zxing()
         {
             DateTime Pstarttime = DateTime.Now;
@@ -893,14 +907,150 @@ namespace Test
 
 
                     //識別QRCode
-                    //var results = DecodeQRcodes(imageStream, out currentPage, out totalPages);
+                    #region 識別QRCode
+                    
+                    var results = DecodeQRcodes(imageStream, out currentPage, out totalPages, SaveImageFile);
 
-                    //if (results.Any())
+                    string EpisodeID = "";
+                    string QrCodeContent = "";
+                    string PatientID = "";
+                    if (results.Any())
+                    {
+                        successCount++;
+                        Console.WriteLine($"  识别成功！找到 {results.Count} 个码：");
+
+
+                        var QRCodeChecks = new List<QRCodeCheck>();
+                        
+                        foreach (var result in results.Where(s => s != null && !string.IsNullOrWhiteSpace(s.Content)))
+                        {
+                            QRCodeCheck qRCodeCheck = new QRCodeCheck();
+                            //var xxx = result.resultPoints;
+                            Console.WriteLine($"    类型：{result.Type}，内容：{result.Content}");
+
+                            if (result.Type == "QR_CODE" && result.Content.Contains("||"))
+                            {
+                                var parts = result.Content.Split(new[] { "||" }, StringSplitOptions.RemoveEmptyEntries);
+                                if (parts.Length > 0 && parts[0].Contains("."))
+                                {
+                                    var episodeParts = parts[0].Trim().Split('.');
+                                    if (episodeParts.Length > 1 && !string.IsNullOrEmpty(episodeParts[1]))
+                                    {
+                                        // When there are multiple QR codes, info.EpisodeID could be set already, check if it starts with HN
+                                        var extractedEpisodeID = episodeParts[1].Trim();
+                                        qRCodeCheck.EpisodeID = extractedEpisodeID;
+                                        qRCodeCheck.QrCodeContent = result.Content;
+                                    }
+                                    // Safely extract Patient ID
+                                    if (parts.Length > 1 && !string.IsNullOrEmpty(parts[1]))
+                                        qRCodeCheck.PatientID = parts[1].Trim();
+                                }
+                                QRCodeChecks.Add(qRCodeCheck);
+                            }
+                        }
+
+                        if (QRCodeChecks == null || QRCodeChecks.Count<=0)
+                        {
+                            continue;
+                        }
+
+                        //获取QRCodeInfos中包含HN的数据
+                        var QRCodeInfo = QRCodeChecks.Where(S => S.EpisodeID.StartsWith("HN")).ToList();
+
+                        if (QRCodeInfo.Count<=0)
+                        {
+                            QRCodeInfo = QRCodeChecks.Where(S => !S.EpisodeID.StartsWith("HN")).ToList();
+                        }
+
+                        if (QRCodeInfo.Count==1)
+                        {
+                            EpisodeID = QRCodeInfo[0].EpisodeID;
+                            QrCodeContent = QRCodeInfo[0].QrCodeContent;
+                            PatientID = QRCodeInfo[0].PatientID;
+
+                            continue;
+                        }
+
+                        //List<string> QRCodeInfoChecks = QRCodeInfo.Select(s => s.QrCodeContent).ToList();
+
+                        //results = results.Where(s => QRCodeInfoChecks.Contains(s.Content)).ToList();
+
+                        results = results.Where(s => QRCodeInfo.Select(q => q.QrCodeContent).Contains(s.Content)).ToList();
+
+                        // 新增：标记二维码坐标并保存图片
+                        try
+                        {
+                            using Stream imageStreamForMarking = ReadLocalFileToStream(imagePath);
+                            using var originalBitmap = SKBitmap.Decode(imageStreamForMarking);
+                            if (originalBitmap != null)
+                            {
+                                string markedImagePath = Path.Combine(SaveImageFile, $"marked_{Path.GetFileNameWithoutExtension(fileName)}.png");
+                                MarkQRCodeCoordinates(originalBitmap, results, markedImagePath);
+                                Console.WriteLine($"  已生成标记坐标的图片：{markedImagePath}");
+
+                                // 新增：标记最左边的二维码
+                                string leftmostImagePath = Path.Combine(SaveImageFile, $"leftmost_{Path.GetFileNameWithoutExtension(fileName)}.png");
+                                MarkLeftmostQRCode(originalBitmap, results, leftmostImagePath);
+                                Console.WriteLine($"  已生成标记最左边二维码的图片：{leftmostImagePath}");
+
+                                // 新增：显示最左边二维码的信息
+                                var leftmostQRCode = FindLeftmostQRCode(results);
+                                if (leftmostQRCode != null)
+                                {
+
+                                    var LeftQRCode = QRCodeInfo.Where(s => s.QrCodeContent.Contains(leftmostQRCode.Content)).FirstOrDefault();
+                                    EpisodeID = LeftQRCode.EpisodeID;
+                                    QrCodeContent = LeftQRCode.QrCodeContent;
+                                    PatientID = LeftQRCode.PatientID;
+
+                                    Console.WriteLine(EpisodeID);
+                                    Console.WriteLine(QrCodeContent);
+                                    Console.WriteLine(PatientID);
+
+                                    Console.WriteLine($"  最左边二维码信息：");
+                                    Console.WriteLine($"    类型：{leftmostQRCode.Type}");
+                                    Console.WriteLine($"    内容：{leftmostQRCode.Content}");
+
+
+
+                                    
+                                    // 显示坐标信息
+                                    if (leftmostQRCode.resultPoints != null && leftmostQRCode.resultPoints.Length >= 4)
+                                    {
+                                        Console.WriteLine($"    左上角坐标：({leftmostQRCode.resultPoints[0]?.X:F1}, {leftmostQRCode.resultPoints[0]?.Y:F1})");
+                                        Console.WriteLine($"    右上角坐标：({leftmostQRCode.resultPoints[1]?.X:F1}, {leftmostQRCode.resultPoints[1]?.Y:F1})");
+                                        Console.WriteLine($"    右下角坐标：({leftmostQRCode.resultPoints[2]?.X:F1}, {leftmostQRCode.resultPoints[2]?.Y:F1})");
+                                        Console.WriteLine($"    左下角坐标：({leftmostQRCode.resultPoints[3]?.X:F1}, {leftmostQRCode.resultPoints[3]?.Y:F1})");
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"  标记坐标失败：{ex.Message}");
+                        }
+                    }
+                    else
+                    {
+                        failCount++;
+                        Console.WriteLine("  未识别到任何二维码");
+                    }
+
+                    Console.WriteLine("--------------------------------------------------");
+                    #endregion
+
+                    //識別Barcode[Code128]
+                    #region 识别Barcode
+                    //string ImageFile = SaveImageFile + @"\" + Path.GetFileNameWithoutExtension(fileName);
+                    ////識別Barcode[Code128]
+                    //var Barcodesresults = DecodeBarcodes(imageStream, out currentPage, out totalPages, ImageFile);
+
+                    //if (Barcodesresults.Any())
                     //{
                     //    successCount++;
-                    //    Console.WriteLine($"  识别成功！找到 {results.Count} 个码：");
+                    //    Console.WriteLine($"  识别成功！找到 {Barcodesresults.Count} 个码：");
 
-                    //    foreach (var result in results)
+                    //    foreach (var result in Barcodesresults)
                     //    {
                     //        Console.WriteLine($"    类型：{result.Type}，内容：{result.Content}");
                     //    }
@@ -908,31 +1058,9 @@ namespace Test
                     //else
                     //{
                     //    failCount++;
-                    //    Console.WriteLine("  未识别到任何二维码");
+                    //    Console.WriteLine("  未识别到任何條形码");
                     //}
-
-                    //Console.WriteLine("--------------------------------------------------");
-
-
-                    string ImageFile = SaveImageFile + @"\" + Path.GetFileNameWithoutExtension(fileName);
-                    //識別Barcode[Code128]
-                    var Barcodesresults = DecodeBarcodes(imageStream, out currentPage, out totalPages, ImageFile);
-
-                    if (Barcodesresults.Any())
-                    {
-                        successCount++;
-                        Console.WriteLine($"  识别成功！找到 {Barcodesresults.Count} 个码：");
-
-                        foreach (var result in Barcodesresults)
-                        {
-                            Console.WriteLine($"    类型：{result.Type}，内容：{result.Content}");
-                        }
-                    }
-                    else
-                    {
-                        failCount++;
-                        Console.WriteLine("  未识别到任何條形码");
-                    }
+                    #endregion
 
                 }
                 catch (Exception ex)
@@ -1030,7 +1158,7 @@ namespace Test
             return memoryStream;
         }
 
-        public static List<DetectedObject> DecodeQRcodes(Stream imageStream, out int currentPage, out int totalPages)
+        public static List<DetectedObject> DecodeQRcodes(Stream imageStream, out int currentPage, out int totalPages, string ImageFile)
         {
             var detectedObjects = new List<DetectedObject>();
             currentPage = 0;
@@ -1101,19 +1229,29 @@ namespace Test
                 if (!strategyResults.Any())
                 {
                     Console.WriteLine("轻度预处理组合");
-                    var lightResults = TryDecodeWithMultiLightProcessing(skBitmap, CreateReader);
+                    var lightResults = TryDecodeWithMultiLightProcessing(skBitmap, CreateReader, "");
                     strategyResults.AddRange(lightResults);
                     if (lightResults.Any()) Console.WriteLine("轻度预处理组合成功");
                 }
 
-                // 重度预处理
+                // 微重度预处理
                 if (!strategyResults.Any())
                 {
-                    Console.WriteLine("重度预处理组合");
-                    var heavyResults = TryDecodeWithHeavyProcessing(skBitmap, CreateReader);
+                    Console.WriteLine("微重度预处理组合");
+                    var heavyResults = TryDecodeWithHeavyProcessing(skBitmap, CreateReader, ImageFile);
                     strategyResults.AddRange(heavyResults);
-                    if (heavyResults.Any()) Console.WriteLine("重度预处理组合成功");
+                    if (heavyResults.Any()) Console.WriteLine("微重度预处理组合成功");
                 }
+
+                // 中重度预处理
+                if (!strategyResults.Any())
+                {
+                    Console.WriteLine("中重度预处理组合");
+                    var heavyResults = TryDecodeWithHeavyPlusProcessing(skBitmap, CreateReader, ImageFile);
+                    strategyResults.AddRange(heavyResults);
+                    if (heavyResults.Any()) Console.WriteLine("中重度预处理组合成功");
+                }
+
 
                 // 多区域扫描
                 if (!strategyResults.Any())
@@ -1489,12 +1627,19 @@ namespace Test
                     {
                         if (!string.IsNullOrEmpty(result.Text))
                         {
+                            if (!FormatCheckFun(result))
+                            {
+                                continue;
+                            }
+
                             results.Add(new DetectedObject
                             {
                                 Type = result.BarcodeFormat.ToString(),
-                                Content = result.Text
+                                Content = result.Text,
+                                resultPoints = result.ResultPoints
                             });
                             Console.WriteLine($"直接解码：{result.BarcodeFormat} - {result.Text}");
+                            Console.WriteLine($"坐标 左上角:{result.ResultPoints[0]}右上角:{result.ResultPoints[1]}右下角:{result.ResultPoints[2]}左下角:{result.ResultPoints[3]}");
                         }
                     }
                 }
@@ -1505,6 +1650,34 @@ namespace Test
             }
 
             return results;
+        }
+
+        private static bool FormatCheckFun(Result result)
+        {
+            if (!FormatCheck)
+            {
+                return false;
+            }
+            //QR_CODE格式校验
+            if (result.BarcodeFormat.ToString() == "QR_CODE" && result.Text.Contains("||"))
+            {
+                var parts = result.Text.Split(new[] { "||" }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length < 1 || !parts[0].Contains("."))
+                {
+                    return false;
+                }
+                var episodeParts = parts[0].Trim().Split('.');
+                if (episodeParts.Length < 2 || string.IsNullOrEmpty(episodeParts[1]))
+                {
+                    return false;
+                }
+            }
+            else if (result.BarcodeFormat.ToString() == "QR_CODE")
+            {
+                return false; // QR_CODE但不含"||"分隔符
+            }
+
+            return true;
         }
 
         //轻度预处理（适合清晰图像）
@@ -1603,8 +1776,8 @@ namespace Test
         private static List<DetectedObject> TryDecodeWithMultiLightProcessing(SKBitmap original, Func<BarcodeFormat, BarcodeReaderGeneric> createReader, string ImageFile = "")
         {
             var results = new List<DetectedObject>();
-            //var scales = new[] { 0.8f, 1.0f, 1.2f, 1.5f, 2.0f };
-            var scales = new[] { 1.0f, 1.2f, 1.5f, 2.0f };
+            var scales = new[] { 0.8f, 1.0f, 1.2f, 1.5f, 2.0f };
+            //var scales = new[] { 1.0f, 1.2f, 1.5f, 2.0f };
 
             foreach (var scale in scales)
             {
@@ -1624,10 +1797,16 @@ namespace Test
                         {
                             if (!string.IsNullOrEmpty(result.Text))
                             {
+                                if (!FormatCheckFun(result))
+                                {
+                                    continue;
+                                }
+
                                 results.Add(new DetectedObject
                                 {
                                     Type = result.BarcodeFormat.ToString(),
-                                    Content = result.Text
+                                    Content = result.Text,
+                                    resultPoints = result.ResultPoints
                                 });
                                 Console.WriteLine($"轻度预处理(缩放{scale})解码：{result.BarcodeFormat} - {result.Text}");
                             }
@@ -1648,7 +1827,7 @@ namespace Test
             return results;
         }
 
-        //重度预处理（使用高效二值化）
+        //微重度预处理（使用高效二值化）
         private static List<DetectedObject> TryDecodeWithHeavyProcessing(SKBitmap original, Func<BarcodeFormat, BarcodeReaderGeneric> createReader, string ImageFile = "")
         {
             var results = new List<DetectedObject>();
@@ -1669,19 +1848,45 @@ namespace Test
                     {
                         if (!string.IsNullOrEmpty(result.Text))
                         {
+                            if (!FormatCheckFun(result))
+                            {
+                                continue;
+                            }
+
                             results.Add(new DetectedObject
                             {
                                 Type = result.BarcodeFormat.ToString(),
-                                Content = result.Text
+                                Content = result.Text,
+                                resultPoints = result.ResultPoints
                             });
-                            Console.WriteLine($"重度预处理解码：{result.BarcodeFormat} - {result.Text}");
+                            Console.WriteLine($"微重度预处理解码：{result.BarcodeFormat} - {result.Text}");
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"重度预处理解码失败：{ex.Message}");
+                Console.WriteLine($"微重度预处理解码失败：{ex.Message}");
+            }
+
+            return results;
+        }
+
+        //中重度预处理（使用高效二值化） 重度后在按倍率識別一次輕度
+        private static List<DetectedObject> TryDecodeWithHeavyPlusProcessing(SKBitmap original, Func<BarcodeFormat, BarcodeReaderGeneric> createReader, string ImageFile = "")
+        {
+            var results = new List<DetectedObject>();
+
+            try
+            {
+                // 使用高效二值化方法
+                using var processedold = BinarizeBitmap(original);
+
+                return TryDecodeWithMultiLightProcessing(processedold, createReader, ImageFile);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"中重度预处理解码失败：{ex.Message}");
             }
 
             return results;
@@ -1713,11 +1918,11 @@ namespace Test
 
             var regions = new[]
             {
-        new SKRectI(0,          0,          halfW,      halfH),       // 左上
-        new SKRectI(halfW,      0,          w,          halfH),       // 右上
-        new SKRectI(0,          halfH,      halfW,      h),           // 左下
-        new SKRectI(halfW,      halfH,      w,          h)            // 右下
-    };
+                new SKRectI(0,          0,          halfW,      halfH),       // 左上
+                new SKRectI(halfW,      0,          w,          halfH),       // 右上
+                new SKRectI(0,          halfH,      halfW,      h),           // 左下
+                new SKRectI(halfW,      halfH,      w,          h)            // 右下
+            };
 
             foreach (var region in regions)
             {
@@ -1781,10 +1986,16 @@ namespace Test
                             {
                                 if (!string.IsNullOrEmpty(result.Text))
                                 {
+                                    if (!FormatCheckFun(result))
+                                    {
+                                        continue;
+                                    }
+
                                     results.Add(new DetectedObject
                                     {
                                         Type = result.BarcodeFormat.ToString(),
-                                        Content = result.Text
+                                        Content = result.Text,
+                                        resultPoints = result.ResultPoints
                                     });
                                     Console.WriteLine($"自适应(小图缩放{scale})解码：{result.BarcodeFormat} - {result.Text}");
                                 }
@@ -1817,10 +2028,16 @@ namespace Test
                             {
                                 if (!string.IsNullOrEmpty(result.Text))
                                 {
+                                    if (!FormatCheckFun(result))
+                                    {
+                                        continue;
+                                    }
+
                                     results.Add(new DetectedObject
                                     {
                                         Type = result.BarcodeFormat.ToString(),
-                                        Content = result.Text
+                                        Content = result.Text,
+                                        resultPoints = result.ResultPoints
                                     });
                                     Console.WriteLine($"自适应(大图缩放{scale})解码：{result.BarcodeFormat} - {result.Text}");
                                 }
@@ -1842,6 +2059,348 @@ namespace Test
             public string Type { get; set; }
             public string Content { get; set; }
             // 可补充：位置、置信度等字段
+            public ResultPoint[] resultPoints { get; set; }
+        }
+
+
+        /// <summary>
+        /// 在图像上标记二维码坐标
+        /// </summary>
+        /// <param name="originalBitmap">原始图像</param>
+        /// <param name="detectedObjects">检测到的二维码对象</param>
+        /// <param name="outputPath">输出图片路径</param>
+        public static void MarkQRCodeCoordinates(SKBitmap originalBitmap, List<DetectedObject> detectedObjects, string outputPath)
+        {
+            if (originalBitmap == null || detectedObjects == null || !detectedObjects.Any())
+                return;
+
+            try
+            {
+                // 创建新的画布用于绘制标记
+                using var markedBitmap = new SKBitmap(originalBitmap.Width, originalBitmap.Height);
+                using var canvas = new SKCanvas(markedBitmap);
+
+                // 绘制原始图像作为背景
+                canvas.DrawBitmap(originalBitmap, 0, 0);
+
+                // 设置绘制参数
+                var paint = new SKPaint
+                {
+                    Style = SKPaintStyle.Stroke,
+                    Color = SKColors.Red,
+                    StrokeWidth = 3,
+                    IsAntialias = true
+                };
+
+                var textPaint = new SKPaint
+                {
+                    Color = SKColors.Blue,
+                    TextSize = 16,
+                    IsAntialias = true,
+                    Typeface = SKTypeface.FromFamilyName("Arial")
+                };
+
+                int qrCodeIndex = 1;
+
+                foreach (var detectedObject in detectedObjects)
+                {
+                    if (detectedObject.resultPoints == null || detectedObject.resultPoints.Length < 3)
+                        continue;
+
+                    // 绘制二维码边界框
+                    var points = detectedObject.resultPoints;
+                    
+                    // 绘制四个角点
+                    for (int i = 0; i < points.Length; i++)
+                    {
+                        var point = points[i];
+                        if (point != null)
+                        {
+                            // 绘制角点圆圈
+                            canvas.DrawCircle(point.X, point.Y, 8, paint);
+
+                            // 绘制角点编号
+                            string pointLabel = $"{i + 1}";
+                            canvas.DrawText(pointLabel, point.X + 10, point.Y - 10, textPaint);
+                        }
+                    }
+
+                    // 绘制连接线（形成四边形）
+                    if (points.Length >= 4)
+                    {
+                        // 左上到右上
+                        if (points[0] != null && points[1] != null)
+                            canvas.DrawLine(points[0].X, points[0].Y, points[1].X, points[1].Y, paint);
+                        
+                        // 右上到右下
+                        if (points[1] != null && points[2] != null)
+                            canvas.DrawLine(points[1].X, points[1].Y, points[2].X, points[2].Y, paint);
+                        
+                        // 右下到左下
+                        if (points[2] != null && points[3] != null)
+                            canvas.DrawLine(points[2].X, points[2].Y, points[3].X, points[3].Y, paint);
+                        
+                        // 左下到左上
+                        if (points[3] != null && points[0] != null)
+                            canvas.DrawLine(points[3].X, points[3].Y, points[0].X, points[0].Y, paint);
+                    }
+
+                    // 计算二维码中心位置
+                    float centerX = 0, centerY = 0;
+                    int validPoints = 0;
+                    foreach (var point in points)
+                    {
+                        if (point != null)
+                        {
+                            centerX += point.X;
+                            centerY += point.Y;
+                            validPoints++;
+                        }
+                    }
+
+                    if (validPoints > 0)
+                    {
+                        centerX /= validPoints;
+                        centerY /= validPoints;
+
+                        // 在中心位置绘制二维码编号和内容
+                        string qrInfo = $"QR{qrCodeIndex}: {detectedObject.Content}";
+                        canvas.DrawText(qrInfo, centerX - 50, centerY, textPaint);
+                    }
+
+                    qrCodeIndex++;
+                }
+
+                // 确保输出目录存在
+                string directory = Path.GetDirectoryName(outputPath);
+                if (!Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                // 保存标记后的图像
+                using var image = SKImage.FromBitmap(markedBitmap);
+                using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+                using var stream = File.OpenWrite(outputPath);
+                data.SaveTo(stream);
+
+                Console.WriteLine($"成功标记 {detectedObjects.Count} 个二维码坐标");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"标记二维码坐标失败：{ex.Message}");
+            }
+        }
+        
+          /// <summary>
+        /// 找到图片中最靠左边的二维码
+        /// 如果有多个最靠左边的，取最上面那个
+        /// </summary>
+        /// <param name="detectedObjects">检测到的二维码对象列表</param>
+        /// <returns>最靠左边的二维码对象，如果没有则返回null</returns>
+        public static DetectedObject FindLeftmostQRCode(List<DetectedObject> detectedObjects)
+        {
+            if (detectedObjects == null || !detectedObjects.Any())
+                return null;
+
+            try
+            {
+                // 过滤掉没有坐标点的二维码
+                var validQRCodes = detectedObjects
+                    .Where(qr => qr.resultPoints != null && qr.resultPoints.Length >= 3)
+                    .ToList();
+
+                if (!validQRCodes.Any())
+                    return null;
+
+                // 计算每个二维码的中心点X坐标（最左边的点）
+                var qrCodesWithLeftmostX = validQRCodes
+                    .Select(qr => new
+                    {
+                        QRCode = qr,
+                        // 计算二维码最左边的X坐标（取所有角点中最小的X值）
+                        LeftmostX = qr.resultPoints
+                            .Where(p => p != null)
+                            .Min(p => p.X),
+                        // 计算二维码最上边的Y坐标（取所有角点中最小的Y值）
+                        TopmostY = qr.resultPoints
+                            .Where(p => p != null)
+                            .Min(p => p.Y)
+                    })
+                    .ToList();
+
+                // 找到最左边的X坐标
+                var minLeftmostX = qrCodesWithLeftmostX.Min(qr => qr.LeftmostX);
+                
+                // 找出所有最左边的二维码（X坐标等于最小值）
+                var leftmostQRCodes = qrCodesWithLeftmostX
+                    .Where(qr => qr.LeftmostX == minLeftmostX)
+                    .ToList();
+
+                // 如果只有一个最左边的二维码，直接返回
+                if (leftmostQRCodes.Count == 1)
+                    return leftmostQRCodes[0].QRCode;
+
+                // 如果有多个最左边的二维码，取最上面那个（Y坐标最小）
+                var topmostQRCode = leftmostQRCodes
+                    .OrderBy(qr => qr.TopmostY)
+                    .FirstOrDefault();
+
+                return topmostQRCode?.QRCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"查找最左边二维码失败：{ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 在图像上标记最左边的二维码
+        /// </summary>
+        /// <param name="originalBitmap">原始图像</param>
+        /// <param name="detectedObjects">检测到的二维码对象</param>
+        /// <param name="outputPath">输出图片路径</param>
+        public static void MarkLeftmostQRCode(SKBitmap originalBitmap, List<DetectedObject> detectedObjects, string outputPath)
+        {
+            if (originalBitmap == null || detectedObjects == null || !detectedObjects.Any())
+                return;
+
+            // 找到最左边的二维码
+            var leftmostQRCode = FindLeftmostQRCode(detectedObjects);
+            
+            if (leftmostQRCode == null)
+            {
+                Console.WriteLine("未找到有效的二维码");
+                return;
+            }
+
+            try
+            {
+                // 创建新的画布用于绘制标记
+                using var markedBitmap = new SKBitmap(originalBitmap.Width, originalBitmap.Height);
+                using var canvas = new SKCanvas(markedBitmap);
+
+                // 绘制原始图像作为背景
+                canvas.DrawBitmap(originalBitmap, 0, 0);
+
+                // 设置绘制参数
+                var highlightPaint = new SKPaint
+                {
+                    Style = SKPaintStyle.Stroke,
+                    Color = SKColors.Green, // 使用绿色高亮显示最左边的二维码
+                    StrokeWidth = 5,
+                    IsAntialias = true
+                };
+
+                var textPaint = new SKPaint
+                {
+                    Color = SKColors.Red,
+                    TextSize = 20,
+                    IsAntialias = true,
+                    Typeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold)
+                };
+
+                // 绘制最左边二维码的边界框
+                var points = leftmostQRCode.resultPoints;
+                
+                if (points != null && points.Length >= 3)
+                {
+                    // 绘制四个角点（绿色大圆圈）
+                    for (int i = 0; i < points.Length; i++)
+                    {
+                        var point = points[i];
+                        if (point != null)
+                        {
+                            // 绘制角点圆圈
+                            canvas.DrawCircle(point.X, point.Y, 12, highlightPaint);
+
+                            // 绘制角点编号
+                            string pointLabel = $"{i + 1}";
+                            canvas.DrawText(pointLabel, point.X + 15, point.Y - 15, textPaint);
+                        }
+                    }
+
+                    // 绘制连接线（形成四边形）
+                    if (points.Length >= 4)
+                    {
+                        // 左上到右上
+                        if (points[0] != null && points[1] != null)
+                            canvas.DrawLine(points[0].X, points[0].Y, points[1].X, points[1].Y, highlightPaint);
+                        
+                        // 右上到右下
+                        if (points[1] != null && points[2] != null)
+                            canvas.DrawLine(points[1].X, points[1].Y, points[2].X, points[2].Y, highlightPaint);
+                        
+                        // 右下到左下
+                        if (points[2] != null && points[3] != null)
+                            canvas.DrawLine(points[2].X, points[2].Y, points[3].X, points[3].Y, highlightPaint);
+                        
+                        // 左下到左上
+                        if (points[3] != null && points[0] != null)
+                            canvas.DrawLine(points[3].X, points[3].Y, points[0].X, points[0].Y, highlightPaint);
+                    }
+
+                    // 计算二维码中心位置
+                    float centerX = 0, centerY = 0;
+                    int validPoints = 0;
+                    foreach (var point in points)
+                    {
+                        if (point != null)
+                        {
+                            centerX += point.X;
+                            centerY += point.Y;
+                            validPoints++;
+                        }
+                    }
+
+                    if (validPoints > 0)
+                    {
+                        centerX /= validPoints;
+                        centerY /= validPoints;
+
+                        // 在中心位置绘制"最左边二维码"标识
+                        string qrInfo = $"最左边二维码: {leftmostQRCode.Content}";
+                        canvas.DrawText(qrInfo, centerX - 80, centerY - 30, textPaint);
+                        
+                        // 绘制箭头指向最左边二维码
+                        var arrowPaint = new SKPaint
+                        {
+                            Color = SKColors.Orange,
+                            StrokeWidth = 3,
+                            IsAntialias = true
+                        };
+                        
+                        // 在图片左上角绘制箭头指向最左边二维码
+                        float arrowStartX = 50;
+                        float arrowStartY = 50;
+                        canvas.DrawLine(arrowStartX, arrowStartY, centerX, centerY, arrowPaint);
+                        
+                        // 绘制箭头头部
+                        canvas.DrawCircle(centerX, centerY, 8, arrowPaint);
+                    }
+                }
+
+                // 确保输出目录存在
+                string directory = Path.GetDirectoryName(outputPath);
+                if (!Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                // 保存标记后的图像
+                using var image = SKImage.FromBitmap(markedBitmap);
+                using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+                using var stream = File.OpenWrite(outputPath);
+                data.SaveTo(stream);
+
+                Console.WriteLine($"成功标记最左边二维码：{leftmostQRCode.Content}");
+                Console.WriteLine($"二维码类型：{leftmostQRCode.Type}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"标记最左边二维码失败：{ex.Message}");
+            }
         }
         #endregion
 
@@ -2146,7 +2705,7 @@ namespace Test
             public SignatureAreaConfig Doctor { get; set; } = new SignatureAreaConfig();
         }
 
-        static string Json = "[{\"formId\":\"Defaut\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"ENT-BUDES-001\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"ONG-BUDES-003\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"ONG-BUDES-015\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"ONT-BUDES-001\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"ONT-BUDES-007\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"URO-BUDES-010\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"URO-BUDES-014\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}}]";
+        static string Json = "[{\"formId\":\"ENT-BUDES-001\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"ONG-BUDES-003\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"ONG-BUDES-015\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"ONT-BUDES-001\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"ONT-BUDES-007\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"URO-BUDES-010\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"URO-BUDES-014\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}}]";
 
         static List<FormSignatureConfig> configs = JsonSerializer.Deserialize<List<FormSignatureConfig>>(Json);
 
@@ -2615,7 +3174,7 @@ namespace Test
             Console.WriteLine($"找到病人签名文本: {signatureText.Text}");
 
             // 截取上方584x80的区域
-            return await CropSignatureArea(signatureText.Boundary, imagePath, "patient_signature", 440, 98, true);
+            return await CropSignatureArea(signatureText.Boundary, imagePath, "patient_signature", 440, 80, true);
         }
 
         /// <summary>
@@ -2719,14 +3278,16 @@ namespace Test
             // 查找所有Doctor'sSignature标记
             //var doctorSignatureMarkers = ocrResults.Where(r =>
             //    r.Text.Contains(formIdConfig.Doctor.BottomReferenceParameters)).ToList();
-            var doctorSignatureMarkers = ocrResults.Where(r => formIdConfig.Doctor.BottomReferenceParameters.Any(param => r.Text.Contains(param.ToLower()))).ToList();
+            var doctorSignatureMarkers = ocrResults.Where(r => formIdConfig.Doctor.BottomReferenceParameters.Any(param => r.Text.Contains(param.ToLower()) ||
+                    CalculateSimilarity(r.Text, param.ToLower()) > 0.7)).ToList();
 
             // 查找所有醫生姓名标记
             //var doctorNameMarkers = ocrResults.Where(r =>
             //    r.Text.Contains(formIdConfig.Doctor.RightReferenceParameters)).ToList();
 
             //包含匹配，OCR识别可能存在细微差异。
-            var doctorNameMarkers = ocrResults.Where(r => formIdConfig.Doctor.RightReferenceParameters.Any(param => r.Text.Contains(param.ToLower()))).ToList();
+            var doctorNameMarkers = ocrResults.Where(r => formIdConfig.Doctor.RightReferenceParameters.Any(param => r.Text.Contains(param.ToLower()) ||
+                    CalculateSimilarity(r.Text, param.ToLower()) > 0.7)).ToList();
 
             foreach (var item in doctorSignatureText)
             {
@@ -2764,11 +3325,11 @@ namespace Test
                     Console.WriteLine($"右侧验证: {isRightOfDoctorName} (距离: {sameLineDoctorName.Boundary.left - item.Boundary.right}px)");
                     Console.WriteLine($"上方验证: {isAboveDoctorSignature} (距离: {sameColumnDoctorSignature.Boundary.top - item.Boundary.bottom}px)");
 
-                    if (isRightOfDoctorName && isAboveDoctorSignature)
+                    if (isRightOfDoctorName || isAboveDoctorSignature)
                     {
                         Console.WriteLine("医生签名位置验证通过 - 简化逻辑");
                         // 截取上方区域
-                        return await CropSignatureArea(item.Boundary, imagePath, "doctor_signature", 440, 98, true);
+                        return await CropSignatureArea(item.Boundary, imagePath, "doctor_signature", 440, 80, true);
                     }
                 }
                 else
@@ -2779,7 +3340,7 @@ namespace Test
 
             Console.WriteLine("所有医生签名位置验证失败，使用默认截取");
             // 如果验证失败，仍然截取但标记为未验证
-            var area = await CropSignatureArea(doctorSignatureText[0].Boundary, imagePath, "doctor_signature_unverified", 440, 98, true);
+            var area = await CropSignatureArea(doctorSignatureText[0].Boundary, imagePath, "doctor_signature_unverified", 440, 80, true);
             area.IsVerified = false;
             return area;
         }
@@ -2793,6 +3354,50 @@ namespace Test
             //return await CropSignatureAreaBySkiaSharp(boundary, imagePath, prefix, width, height, true);
         }
 
+        
+        /// <summary>
+        /// 根据图片实际分辨率动态调整裁剪区域尺寸
+        /// </summary>
+        /// <param name="imagePath">图片路径</param>
+        /// <param name="baseWidth">基于1190x1683分辨率的基准宽度</param>
+        /// <param name="baseHeight">基于1190x1683分辨率的基准高度</param>
+        /// <returns>调整后的宽度和高度</returns>
+        private static (int adjustedWidth, int adjustedHeight) AdjustCropAreaByResolution(string imagePath, int baseWidth, int baseHeight)
+        {
+            try
+            {
+                // 获取图片实际分辨率
+                using var image = SixLabors.ImageSharp.Image.Load(imagePath);
+                int actualWidth = image.Width;
+                int actualHeight = image.Height;
+
+                // 基准分辨率 (1190x1683)
+                int baseResolutionWidth = 1190;
+                int baseResolutionHeight = 1683;
+
+                // 计算缩放比例（使用宽度和高度中较小的比例，确保不会超出边界）
+                double widthScale = (double)actualWidth / baseResolutionWidth;
+                double heightScale = (double)actualHeight / baseResolutionHeight;
+
+                // 使用平均缩放比例，保持裁剪区域的相对位置
+                double scale = (widthScale + heightScale) / 2.0;
+
+                // 调整裁剪区域尺寸
+                int adjustedWidth = (int)Math.Round(baseWidth * scale);
+                int adjustedHeight = (int)Math.Round(baseHeight * scale);
+
+                Console.WriteLine($"分辨率适配：基准({baseResolutionWidth}x{baseResolutionHeight}) -> 实际({actualWidth}x{actualHeight})");
+                Console.WriteLine($"裁剪区域：基准({baseWidth}x{baseHeight}) -> 适配({adjustedWidth}x{adjustedHeight})");
+
+                return (adjustedWidth, adjustedHeight);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"获取图片分辨率失败，使用基准尺寸: {ex.Message}");
+                return (baseWidth, baseHeight);
+            }
+        }
+
         /// <summary>
         /// 使用SixLabors截取签名区域
         /// </summary>
@@ -2800,6 +3405,11 @@ namespace Test
         {
             try
             {
+                // 根据图片实际分辨率调整裁剪区域尺寸
+                (int adjustedWidth, int adjustedHeight) = AdjustCropAreaByResolution(imagePath, width, height);
+                width = adjustedWidth;
+                height = adjustedHeight;
+
                 using var image = SixLabors.ImageSharp.Image.Load(imagePath);
 
                 // 计算截取区域
@@ -4006,9 +4616,24 @@ namespace Test
             // 计算三个核心指标：不规则复杂度、黑色像素占比、线条连续性
             var metrics = CalculateSignatureMetrics(image);
 
+            // 截取区域
+            using var croppedImage = image.Clone();
+
+            // 保存截取图片
+            string outputDir = Path.Combine(Path.GetDirectoryName(imageFilePath), "signature_areas");
+            Directory.CreateDirectory(outputDir);
+
+            //string outputPath = Path.Combine(outputDir, $"{prefix}_{DateTime.Now:yyyyMMddHHmmss}.jpg");
+            string FileName = Path.GetFileNameWithoutExtension(imageFilePath);
+            string outputPath = Path.Combine(outputDir, $"{HasSignature}-{FileName}.jpg");
+            croppedImage.SaveAsJpegAsync(outputPath);
+
+
+
+
             // 三重判定（同时满足才判定为签名）
             const int IrregularThreshold = 20;          // 不规则复杂度阈值
-            const float BlackRatioThreshold = 0.008f;   // 黑色像素占比阈值（0.8%）
+            const float BlackRatioThreshold = 0.006f;   // 黑色像素占比阈值（0.8%）
             //const float LineContinuityThreshold = 0.6f; // 线条连续性阈值（打印线条>0.6，签名<0.6）
 
             bool isIrregular = metrics.IrregularComplexity > IrregularThreshold;
