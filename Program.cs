@@ -7,6 +7,7 @@ using SixLabors.ImageSharp.Processing;
 using SkiaSharp;
 using SMBLibrary.Client;
 using System.Diagnostics.Metrics;
+using System.Net;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
@@ -27,11 +28,13 @@ namespace Test
             //Zxing();
             //ChangeImages();
             //OCRChange();
-            OCRImage();
+            //OCRImage();
+            //DownLoad();
             //string folderPath = @"C:\Users\liusi\Desktop\Form\check";
             //TestSignatureDetection(folderPath);
 
             //Console.WriteLine(HasSignature("C:\\Users\\liusi\\Desktop\\signature\\doctor_signature-4b0dbda9-0bc2-4c65-b86d-021880a1ac6f.jpg"));
+
 
             Console.WriteLine();
             Console.ReadKey();
@@ -4795,6 +4798,148 @@ namespace Test
             }
         }
         #endregion
+
+        #region DownLoad
+        public static void DownLoad()
+        {
+            Console.WriteLine("开始执行下载任务");
+
+            int startId = 29835;
+            string baseUrl  = "https://103.155.102.84/download?ID=";
+            string saveDirectory = @"D:\DownloadFiles"; // 指定保存目录，可自行修改
+
+            // 忽略SSL证书验证（如果目标站点是自签名证书）
+            ServicePointManager.ServerCertificateValidationCallback += (sender, cert, chain, sslPolicyErrors) => true;
+
+
+
+            for (int i = 0; i < 38; i++)
+            {
+                int currentId = startId + i;
+                string downloadUrl = baseUrl + currentId;
+
+                // 创建保存目录（如果不存在）
+                if (!Directory.Exists(saveDirectory))
+                {
+                    Directory.CreateDirectory(saveDirectory);
+                    Console.WriteLine($"创建保存目录: {saveDirectory}");
+                }
+
+                try
+                {
+
+                    // 打开HTML文件
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = downloadUrl,
+                        UseShellExecute = true
+                    });
+
+                    // // 第一步：获取文件原始名称
+                    // string originalFileName = GetOriginalFileName(downloadUrl);
+                    // if (string.IsNullOrEmpty(originalFileName))
+                    // {
+                    //     // 如果获取不到原始名称，使用备用命名
+                    //     originalFileName = $"file_{currentId}.dat";
+                    //     Console.WriteLine($"未获取到原始文件名，使用备用名称: {originalFileName}");
+                    // }
+
+                    //// 拼接完整保存路径（处理重复文件名）
+                    // string savePath = GetUniqueFilePath(saveDirectory, originalFileName);
+
+                    //Console.WriteLine($"正在下载: {downloadUrl}");
+                    //Console.WriteLine($"保存路径: {savePath}");
+
+                    //// 创建WebClient对象进行下载
+                    //using (WebClient client = new WebClient())
+                    //{
+                    //    // 执行下载并保存到指定路径
+                    //    client.DownloadFile(downloadUrl, savePath);
+
+                    //      Console.WriteLine($"下载完成: {Path.GetFileName(savePath)}");
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    // 捕获异常，避免单个文件下载失败导致整个循环终止
+                    Console.WriteLine($"下载失败 {currentId}: {ex.Message}");
+                }
+
+                // 可选：添加短暂延迟，避免请求过快被服务器限制
+                System.Threading.Thread.Sleep(1000);
+            }
+
+            Console.WriteLine("所有下载任务执行完毕！");
+        }
+
+        /// <summary>
+        /// 从下载链接获取文件的原始名称
+        /// </summary>
+        /// <param name="url">下载链接</param>
+        /// <returns>文件原始名称</returns>
+        private static string GetOriginalFileName(string url)
+        {
+            try
+            {
+                // 创建请求但不下载整个文件，只获取响应头
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+                request.Method = "HEAD"; // 只请求头信息，不请求文件内容
+                request.Timeout = 5000;  // 超时时间5秒
+
+                using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+                {
+                    // 从响应头中获取Content-Disposition
+                    string disposition = response.Headers["Content-Disposition"];
+                    if (!string.IsNullOrEmpty(disposition))
+                    {
+                        // 正则匹配文件名（兼容不同格式的Content-Disposition）
+                        Match match = Regex.Match(disposition, @"filename=""?([^;]+)""?", RegexOptions.IgnoreCase);
+                        if (match.Success)
+                        {
+                            string fileName = match.Groups[1].Value.Trim();
+                            // 处理中文乱码（如果有）
+                            fileName = System.Web.HttpUtility.UrlDecode(fileName);
+                            return fileName;
+                        }
+                    }
+
+                    // 如果没有Content-Disposition，尝试从URL解析（备用方案）
+                    return Path.GetFileName(url);
+                }
+            }
+            catch
+            {
+                // 获取文件名失败时返回空
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 获取唯一的文件路径（避免同名文件覆盖）
+        /// </summary>
+        /// <param name="directory">保存目录</param>
+        /// <param name="fileName">文件名</param>
+        /// <returns>唯一路径</returns>
+        private static string GetUniqueFilePath(string directory, string fileName)
+        {
+            string filePath = Path.Combine(directory, fileName);
+            string fileNameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+            string extension = Path.GetExtension(fileName);
+
+            // 如果文件已存在，添加数字后缀（如：test.jpg → test(1).jpg）
+            int counter = 1;
+            while (File.Exists(filePath))
+            {
+                 filePath = Path.Combine(directory, $"{fileNameWithoutExt}({counter}){extension}");
+                 counter++; // 单独一行执行自增操作
+            }
+
+            return filePath;
+        }
+
+
+        #endregion
+
     }
 }
 
