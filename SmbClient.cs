@@ -394,7 +394,7 @@ namespace Test
             oldPath = FormatPath(workingDirectory, oldPath);
             newPath = FormatPath(workingDirectory, newPath);
 
-            Console.WriteLine($"正在重命名/移动: {oldPath} -> {newPath}");
+            //Console.WriteLine($"正在重命名/移动: {oldPath} -> {newPath}");
 
             // 打开文件句柄（需要写入权限）
             var status = store!.CreateFile(out var fileHandle, out var fileAttributes, oldPath,
@@ -416,7 +416,7 @@ namespace Test
                 status = store.SetFileInformation(fileHandle, renameInfo);
                 CheckStatus(status, nameof(store.SetFileInformation));
 
-                Console.WriteLine($"文件重命名/移动成功: {oldPath} -> {newPath}");
+                //Console.WriteLine($"文件重命名/移动成功: {oldPath} -> {newPath}");
             }
             finally
             {
