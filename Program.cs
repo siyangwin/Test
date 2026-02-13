@@ -26,7 +26,7 @@ namespace Test
     {
         static async Task Main(string[] args)
         {
-            //Zxing();
+            Zxing();
             //ChangeImages();
             //OCRChange();
             //OCRImage();
@@ -39,8 +39,11 @@ namespace Test
             //移除文件名非法字符
             //ChangeImageName();
 
+
+            //文件名校验
+            //CheckFileName();
             //SMB
-            ReadSmbFile();
+            //ReadSmbFile();
 
             Console.WriteLine();
             Console.ReadKey();
@@ -457,66 +460,6 @@ namespace Test
         #endregion
 
 
-        public static void Test(string name)
-        {
-            var result = SplitAndValidateFileName(name);
-
-            Console.WriteLine(result.HasValue
-                ? $"成功：DateTime={result.Value.dateTime:yyyy-MM-dd}, staffId={result.Value.staffId}, userAd={result.Value.userAd}, locationCode={result.Value.locationCode}"
-                : "失败：格式/类型不符合");
-        }
-
-
-        // 返回值：Tuple<DateTime, int, string, string> 或 null（格式/类型不符）
-        public static (DateTime dateTime, int staffId, string userAd, string locationCode)? SplitAndValidateFileName(string fileName)
-        {
-            // 正则匹配基础格式
-            string pattern = @"^(?<DateTime>.+)_(?<staff_id>.+)_(?<user_ad>.+)_(?<location_code>.+)$";
-            Match match = Regex.Match(fileName, pattern);
-
-            if (!match.Success)
-                return null;
-
-            // 提取各部分字符串
-            string dateTimeStr = match.Groups["DateTime"].Value;
-            string staffIdStr = match.Groups["staff_id"].Value;
-            string userAd = match.Groups["user_ad"].Value;
-            string locationCode = match.Groups["location_code"].Value;
-
-            //    // 支持的所有时间格式（含 20251027164030）
-            //    string[] allowedFormats = new[]
-            //    {
-            //    "yyyyMMdd",                  // 仅日期：20251027
-            //    "yyyyMMddHHmmss",            // 无分隔符日期时间：20251027164030
-            //    "yyyyMMddTHHmmss",           // T分隔日期时间：20251027T164030
-            //    "yyyy-MM-dd",                // 横线日期：2025-10-27
-            //    "yyyy-MM-ddTHH:mm:ss"        // T分隔带符号日期时间：2025-10-27T16:40:30
-            //};
-
-            // 支持的所有时间格式（含 20251027164030）
-            string[] allowedFormats = new[]
-            {
-                "yyyyMMddTHHmmss"
-            };
-
-            // 转换 DateTime（支持常见格式，如 yyyyMMdd、yyyy-MM-dd 等）
-            if (!DateTime.TryParseExact(dateTimeStr,
-                allowedFormats,
-                System.Globalization.CultureInfo.InvariantCulture,
-                System.Globalization.DateTimeStyles.None,
-                out DateTime dateTime))
-            {
-                return null; // DateTime 转换失败
-            }
-
-            // 转换 staff_id 为 int
-            if (!int.TryParse(staffIdStr, out int staffId))
-                return null; // staff_id 转换失败
-
-            // 所有校验通过，返回强类型结果
-            return (dateTime, staffId, userAd, locationCode);
-        }
-
         public static string[] SplitFileName(string fileName)
         {
             // 定义正则表达式匹配格式：{DateTime}_{staff_id}_{user AD account}_{location code}
@@ -814,8 +757,8 @@ namespace Test
         public static void Zxing()
         {
             DateTime Pstarttime = DateTime.Now;
-            string folderPath = @"C:\Users\liusi\Desktop\121962";
-            string SaveImageFile = @"C:\Users\liusi\Desktop\12196Demo";
+            string folderPath = @"C:\Users\liusi\Desktop\PRD";
+            string SaveImageFile = @"C:\Users\liusi\Desktop\PRDDemo";
             // 检查文件夹是否存在
             if (!Directory.Exists(folderPath))
             {
@@ -5206,6 +5149,143 @@ namespace Test
             }
         }
         #endregion
+
+
+        #region 文件名校验
+        public static void CheckFileName()
+        {
+            // 測試用例
+            string[] testFiles = {
+               "20260121T133700_14161_xx_SMBb.pdf",           // 舊格式
+               "20260121T133700_14161_xx_SMBb_1.pdf",         // 新格式 _1
+               "20260121T133700_14161_xx_SMBb_0.pdf"          // 新格式 _0
+            };
+
+            foreach (string FileName in testFiles)
+            {
+
+                //string FileName = "20260121T133700_14161_xx_SMBb.pdf";
+
+                var result = SplitAndValidateFileName(FileName);
+
+                // Console.WriteLine(result.HasValue
+                //     ? $"成功：DateTime={result.Value.dateTime:yyyy-MM-dd}, staffId={result.Value.staffId}, userAd={result.Value.userAd}, locationCode={result.Value.locationCode}"
+                //     : "失败：格式/类型不符合");
+
+                if (result.HasValue)
+                {
+                    Console.WriteLine($" {FileName} - 格式正確");
+                    Console.WriteLine($"   日期時間: {result.Value.dateTime}");
+                    Console.WriteLine($"   員工ID: {result.Value.staffId}");
+                    Console.WriteLine($"   用戶賬號: {result.Value.userAd}");
+                    Console.WriteLine($"   位置代碼: {result.Value.locationCode}");
+                    Console.WriteLine($"   Is Combine: {result.Value.iscombine}");
+
+                    // 狀態檢測
+                    var status = GetFileNameStatus(FileName);
+                    Console.WriteLine($"   狀態標記: {(status.HasValue ? status.Value.ToString() : "無")}");
+                }
+                else
+                {
+                    Console.WriteLine($" {FileName} - 格式錯誤");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 拆分並驗證檔案名稱
+        /// </summary>
+        /// <param name="fileName"></param>
+        /// <returns>返回值：Tuple<DateTime, int, string, string> 或 null（格式/类型不符）</returns>
+        public static (DateTime dateTime, int staffId, string userAd, string locationCode,string iscombine)? SplitAndValidateFileName(string fileName)
+        {
+            // // 正则匹配基础格式
+            // string pattern = @"^(?<DateTime>.+)_(?<staff_id>.+)_(?<user_ad>.+)_(?<location_code>.+)$";
+            // Match match = Regex.Match(fileName, pattern);
+            // 移除文件扩展名
+            string fileNameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+
+            // 正则匹配两种格式：
+            // 格式1: {DateTime}_{staff_id}_{user_ad}_{location_code}
+            // 格式2: {DateTime}_{staff_id}_{user_ad}_{location_code}_{status}
+            string pattern1 = @"^(?<DateTime>.+)_(?<staff_id>.+)_(?<user_ad>.+)_(?<location_code>.+)$";
+            string pattern2 = @"^(?<DateTime>.+)_(?<staff_id>.+)_(?<user_ad>.+)_(?<location_code>.+)_(?<iscombine>[01])$";
+            
+            Match match1 = Regex.Match(fileNameWithoutExt, pattern1);
+            Match match2 = Regex.Match(fileNameWithoutExt, pattern2);
+            
+            Match match = match2.Success ? match2 : match1;
+
+            if (!match.Success)
+                return null;
+
+            string dateTimeStr = match.Groups["DateTime"].Value;
+            string staffIdStr = match.Groups["staff_id"].Value;
+            string userAd = match.Groups["user_ad"].Value;
+            string locationCode = match.Groups["location_code"].Value;
+            string iscombine = "false";
+            if (match2.Success)
+            {
+                if (match.Groups["iscombine"].Value == "1")
+                {
+                    iscombine = "true";
+                }
+            }
+
+            // 支持的所有时间格式（含 20251027164030）
+            string[] allowedFormats = new[]
+            {
+                "yyyyMMdd",                  // 仅日期：20251027
+                "yyyyMMddHHmmss",            // 无分隔符日期时间：20251027164030
+                "yyyyMMddTHHmmss",           // T分隔日期时间：20251027T164030
+                "yyyy-MM-dd",                // 横线日期：2025-10-27
+                "yyyy-MM-ddTHH:mm:ss"        // T分隔带符号日期时间：2025-10-27T16:40:30
+            };
+
+            if (!DateTime.TryParseExact(dateTimeStr,
+                allowedFormats,
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None,
+                out DateTime dateTime))
+            {
+                return null;
+            }
+
+            if (!int.TryParse(staffIdStr, out int staffId))
+                return null;
+
+
+            if (string.IsNullOrEmpty(locationCode))
+            {
+                return null;
+            }
+
+            return (dateTime, staffId, userAd, locationCode, iscombine);
+        }
+
+
+        /// <summary>
+        /// 检测文件名是否包含状态标记（_1 或 _0）
+        /// </summary>
+        /// <param name="fileName">文件名</param>
+        /// <returns>返回状态值：1、0 或 null（无状态标记）</returns>
+        public static int? GetFileNameStatus(string fileName)
+        {
+            string fileNameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+            
+            // 匹配格式：{DateTime}_{staff_id}_{user_ad}_{location_code}_{status}
+            string pattern = @"^(?<DateTime>.+)_(?<staff_id>.+)_(?<user_ad>.+)_(?<location_code>.+)_(?<iscombine>[01])$";
+            Match match = Regex.Match(fileNameWithoutExt, pattern);
+            
+            if (match.Success && int.TryParse(match.Groups["iscombine"].Value, out int status))
+            {
+                return status;
+            }
+            
+            return null;
+        }
+        #endregion
+
 
     }
 }
