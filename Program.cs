@@ -1,4 +1,6 @@
-﻿using Org.BouncyCastle.Crypto.Agreement;
+﻿using DevExpress.Office.DigitalSignatures;
+using DevExpress.Pdf;
+using Org.BouncyCastle.Crypto.Agreement;
 using Org.BouncyCastle.Utilities.Zlib;
 using Renci.SshNet;
 using SixLabors.ImageSharp;
@@ -26,7 +28,7 @@ namespace Test
     {
         static async Task Main(string[] args)
         {
-            Zxing();
+            //Zxing();
             //ChangeImages();
             //OCRChange();
             //OCRImage();
@@ -39,12 +41,19 @@ namespace Test
             //移除文件名非法字符
             //ChangeImageName();
 
-
             //文件名校验
             //CheckFileName();
             //SMB
             //ReadSmbFile();
 
+
+            //清理拆分Form的数据
+            //FormCsvCleaner();
+
+            //IAM Smart 签名 esign 
+            //esignAsync();
+            //EsignSignLocalPdfAsync();
+            TestFileHash();
             Console.WriteLine();
             Console.ReadKey();
 
@@ -816,7 +825,7 @@ namespace Test
 
                     //識別QRCode
                     #region 識別QRCode
-                    
+
                     var results = DecodeQRcodes(imageStream, out currentPage, out totalPages, SaveImageFile);
 
                     string EpisodeID = "";
@@ -829,7 +838,7 @@ namespace Test
 
 
                         var QRCodeChecks = new List<QRCodeCheck>();
-                        
+
                         foreach (var result in results.Where(s => s != null && !string.IsNullOrWhiteSpace(s.Content)))
                         {
                             QRCodeCheck qRCodeCheck = new QRCodeCheck();
@@ -857,7 +866,7 @@ namespace Test
                             }
                         }
 
-                        if (QRCodeChecks == null || QRCodeChecks.Count<=0)
+                        if (QRCodeChecks == null || QRCodeChecks.Count <= 0)
                         {
                             continue;
                         }
@@ -865,12 +874,12 @@ namespace Test
                         //获取QRCodeInfos中包含HN的数据
                         var QRCodeInfo = QRCodeChecks.Where(S => S.EpisodeID.StartsWith("HN")).ToList();
 
-                        if (QRCodeInfo.Count<=0)
+                        if (QRCodeInfo.Count <= 0)
                         {
                             QRCodeInfo = QRCodeChecks.Where(S => !S.EpisodeID.StartsWith("HN")).ToList();
                         }
 
-                        if (QRCodeInfo.Count==1)
+                        if (QRCodeInfo.Count == 1)
                         {
                             EpisodeID = QRCodeInfo[0].EpisodeID;
                             QrCodeContent = QRCodeInfo[0].QrCodeContent;
@@ -921,7 +930,7 @@ namespace Test
 
 
 
-                                    
+
                                     // 显示坐标信息
                                     if (leftmostQRCode.resultPoints != null && leftmostQRCode.resultPoints.Length >= 4)
                                     {
@@ -2017,7 +2026,7 @@ namespace Test
 
                     // 绘制二维码边界框
                     var points = detectedObject.resultPoints;
-                    
+
                     // 绘制四个角点
                     for (int i = 0; i < points.Length; i++)
                     {
@@ -2039,15 +2048,15 @@ namespace Test
                         // 左上到右上
                         if (points[0] != null && points[1] != null)
                             canvas.DrawLine(points[0].X, points[0].Y, points[1].X, points[1].Y, paint);
-                        
+
                         // 右上到右下
                         if (points[1] != null && points[2] != null)
                             canvas.DrawLine(points[1].X, points[1].Y, points[2].X, points[2].Y, paint);
-                        
+
                         // 右下到左下
                         if (points[2] != null && points[3] != null)
                             canvas.DrawLine(points[2].X, points[2].Y, points[3].X, points[3].Y, paint);
-                        
+
                         // 左下到左上
                         if (points[3] != null && points[0] != null)
                             canvas.DrawLine(points[3].X, points[3].Y, points[0].X, points[0].Y, paint);
@@ -2099,8 +2108,8 @@ namespace Test
                 Console.WriteLine($"标记二维码坐标失败：{ex.Message}");
             }
         }
-        
-          /// <summary>
+
+        /// <summary>
         /// 找到图片中最靠左边的二维码
         /// 如果有多个最靠左边的，取最上面那个
         /// </summary>
@@ -2139,7 +2148,7 @@ namespace Test
 
                 // 找到最左边的X坐标
                 var minLeftmostX = qrCodesWithLeftmostX.Min(qr => qr.LeftmostX);
-                
+
                 // 找出所有最左边的二维码（X坐标等于最小值）
                 var leftmostQRCodes = qrCodesWithLeftmostX
                     .Where(qr => qr.LeftmostX == minLeftmostX)
@@ -2176,7 +2185,7 @@ namespace Test
 
             // 找到最左边的二维码
             var leftmostQRCode = FindLeftmostQRCode(detectedObjects);
-            
+
             if (leftmostQRCode == null)
             {
                 Console.WriteLine("未找到有效的二维码");
@@ -2211,7 +2220,7 @@ namespace Test
 
                 // 绘制最左边二维码的边界框
                 var points = leftmostQRCode.resultPoints;
-                
+
                 if (points != null && points.Length >= 3)
                 {
                     // 绘制四个角点（绿色大圆圈）
@@ -2235,15 +2244,15 @@ namespace Test
                         // 左上到右上
                         if (points[0] != null && points[1] != null)
                             canvas.DrawLine(points[0].X, points[0].Y, points[1].X, points[1].Y, highlightPaint);
-                        
+
                         // 右上到右下
                         if (points[1] != null && points[2] != null)
                             canvas.DrawLine(points[1].X, points[1].Y, points[2].X, points[2].Y, highlightPaint);
-                        
+
                         // 右下到左下
                         if (points[2] != null && points[3] != null)
                             canvas.DrawLine(points[2].X, points[2].Y, points[3].X, points[3].Y, highlightPaint);
-                        
+
                         // 左下到左上
                         if (points[3] != null && points[0] != null)
                             canvas.DrawLine(points[3].X, points[3].Y, points[0].X, points[0].Y, highlightPaint);
@@ -2270,7 +2279,7 @@ namespace Test
                         // 在中心位置绘制"最左边二维码"标识
                         string qrInfo = $"最左边二维码: {leftmostQRCode.Content}";
                         canvas.DrawText(qrInfo, centerX - 80, centerY - 30, textPaint);
-                        
+
                         // 绘制箭头指向最左边二维码
                         var arrowPaint = new SKPaint
                         {
@@ -2278,12 +2287,12 @@ namespace Test
                             StrokeWidth = 3,
                             IsAntialias = true
                         };
-                        
+
                         // 在图片左上角绘制箭头指向最左边二维码
                         float arrowStartX = 50;
                         float arrowStartY = 50;
                         canvas.DrawLine(arrowStartX, arrowStartY, centerX, centerY, arrowPaint);
-                        
+
                         // 绘制箭头头部
                         canvas.DrawCircle(centerX, centerY, 8, arrowPaint);
                     }
@@ -2626,14 +2635,15 @@ namespace Test
         public class SignatureSystemParameters
         {
             [JsonPropertyName("irregularThreshold")]
-            public int IrregularThreshold { get; set; }  = 20;
+            public int IrregularThreshold { get; set; } = 20;
 
             [JsonPropertyName("blackRatioThreshold")]
             public float BlackRatioThreshold { get; set; } = 0.006f;
         }
 
-        static string Json = "{\"config\":[{\"formId\":\"ENT-BUDES-001\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"ONG-BUDES-003\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"ONG-BUDES-015\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"ONT-BUDES-001\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"ONT-BUDES-007\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"URO-BUDES-010\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}},{\"formId\":\"URO-BUDES-014\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":98}}],\"parameters\":{\"irregularThreshold\":20,\"blackRatioThreshold\":0.006}}";
-
+        #region Json
+        static string Json = "{\"config\":[{\"formId\":\"EDC-BUDES-013\",\"page\":2,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\",\"病/親属/监腰大/獲授權大士策署\",\"病人/親屬/監護人簽署\",\"病人/親/護人策署\",\"病人/親丽/護人策署\",\"病人/親丽/監護人簽署\",\"病人/親/監護人署\",\"病人/親屬/監護人署\",\"病人/親屬/護人署\",\"病人/親屬/監護人策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\",\"生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80}},{\"formId\":\"URO-BUDES-009\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\",\"病/親属/监腰大/獲授權大士策署\",\"病人/親屬/監護人簽署\",\"病人/親/護人策署\",\"病人/親丽/護人策署\",\"病人/親丽/監護人簽署\",\"病人/親/監護人署\",\"病人/親屬/監護人署\",\"病人/親屬/護人署\",\"病人/親屬/監護人策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\",\"生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80}},{\"formId\":\"EDC-BUDES-002\",\"page\":4,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80},\"doctor\":{\"targetParameters\":[\"醫生策著\",\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\",\"生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80}},{\"formId\":\"EDC-BUDES-001\",\"page\":4,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\",\"生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80}},{\"formId\":\"ONG-BUDES-016\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\",\"病人/親/监護人/獲授權人士薯\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\",\"生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80}},{\"formId\":\"ONG-BUDES-012\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\",\"病人/親/端镇人/授松人士签馨\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\",\"生署\",\"劈生寇署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80}}],\"parameters\":{\"irregularThreshold\":20,\"blackRatioThreshold\":0.006}}";
+        #endregion
         static SignatureConfig SConfig = JsonSerializer.Deserialize<SignatureConfig>(Json);
 
         static List<FormSignatureConfig> configs = SConfig.formSignatureConfig;
@@ -2820,7 +2830,7 @@ namespace Test
                 }
             }
 
-             // 调用签名区域截取功能
+            // 调用签名区域截取功能
             await ExtractSignatureAreas(ocrResults, imagePath);
         }
 
@@ -3089,11 +3099,23 @@ namespace Test
 
             var patientSignaturePatterns = formIdConfig.Patient.TargetParameters;
 
-            // 查找匹配的文本
-            var signatureText = ocrResults.FirstOrDefault(r =>
+            // 查找所有匹配的文本
+            var signatureList = ocrResults.Where(r =>
                 patientSignaturePatterns.Any(pattern =>
                     r.Text.Contains(pattern.ToLower()) ||
-                    CalculateSimilarity(r.Text, pattern.ToLower()) > 0.7));
+                    CalculateSimilarity(r.Text, pattern.ToLower()) > 0.7)).ToList();
+
+            OCRResult signatureText = null;
+            if (signatureList != null && signatureList.Any())
+            {
+                signatureText = signatureList.MinBy(item => item.Boundary.left);
+            }
+
+            //// 查找匹配的文本
+            //signatureText = ocrResults.FirstOrDefault(r =>
+            //    patientSignaturePatterns.Any(pattern =>
+            //        r.Text.Contains(pattern.ToLower()) ||
+            //        CalculateSimilarity(r.Text, pattern.ToLower()) > 0.7));
 
             if (signatureText == null)
             {
@@ -3278,7 +3300,7 @@ namespace Test
                     isRightOfDoctorName = item.Boundary.right < sameLineDoctorName.Boundary.left;
                     Console.WriteLine($"醫生姓名位置: ({sameLineDoctorName.Boundary.left}, {sameLineDoctorName.Boundary.top}, {sameLineDoctorName.Boundary.right}, {sameLineDoctorName.Boundary.bottom})");
                     Console.WriteLine($"右侧验证: {isRightOfDoctorName} (距离: {sameLineDoctorName.Boundary.left - item.Boundary.right}px)");
-                  
+
                 }
 
                 if (sameColumnDoctorSignature != null)
@@ -3286,12 +3308,11 @@ namespace Test
                     // 验证上方关系
                     isAboveDoctorSignature = item.Boundary.top < sameColumnDoctorSignature.Boundary.top;
                     Console.WriteLine($"Doctor'sSignature位置: ({sameColumnDoctorSignature.Boundary.left}, {sameColumnDoctorSignature.Boundary.top}, {sameColumnDoctorSignature.Boundary.right}, {sameColumnDoctorSignature.Boundary.bottom})");
+                    Console.WriteLine($"上方验证: {isAboveDoctorSignature} (距离: {sameColumnDoctorSignature.Boundary.top - item.Boundary.bottom}px)");
                 }
 
                 if (isRightOfDoctorName || isAboveDoctorSignature)
                 {
-                    Console.WriteLine($"上方验证: {isAboveDoctorSignature} (距离: {sameColumnDoctorSignature.Boundary.top - item.Boundary.bottom}px)");
-
                     Console.WriteLine("医生签名位置验证通过 - 简化逻辑");
                     // 截取上方区域
                     return await CropSignatureArea(item.Boundary, imagePath, "doctor_signature", 440, 80, true);
@@ -3318,7 +3339,7 @@ namespace Test
             //return await CropSignatureAreaBySkiaSharp(boundary, imagePath, prefix, width, height, true);
         }
 
-        
+
         /// <summary>
         /// 根据图片实际分辨率动态调整裁剪区域尺寸
         /// </summary>
@@ -4709,8 +4730,8 @@ namespace Test
         {
             Console.WriteLine("开始执行下载任务");
 
-            int startId = 29835;
-            string baseUrl  = "https://103.155.102.84/download?ID=";
+            int startId = 32044;
+            string baseUrl = "https://103.155.102.84/download?ID=";
             string saveDirectory = @"D:\DownloadFiles"; // 指定保存目录，可自行修改
 
             // 忽略SSL证书验证（如果目标站点是自签名证书）
@@ -4718,7 +4739,7 @@ namespace Test
 
 
 
-            for (int i = 0; i < 38; i++)
+            for (int i = 0; i < 30; i++)
             {
                 int currentId = startId + i;
                 string downloadUrl = baseUrl + currentId;
@@ -4835,8 +4856,8 @@ namespace Test
             int counter = 1;
             while (File.Exists(filePath))
             {
-                 filePath = Path.Combine(directory, $"{fileNameWithoutExt}({counter}){extension}");
-                 counter++; // 单独一行执行自增操作
+                filePath = Path.Combine(directory, $"{fileNameWithoutExt}({counter}){extension}");
+                counter++; // 单独一行执行自增操作
             }
 
             return filePath;
@@ -4875,7 +4896,6 @@ namespace Test
 
         #endregion
 
-
         #region SMB讀取文件處理
         public static void ReadSmbFile()
         {
@@ -4885,7 +4905,7 @@ namespace Test
             string SmbUser = "liu.siyang@outlook.com";
             string SmbPassword = "Liu95Si08Yang26";
             string FolderRootPath = "/MRO";
-             string SuccessFolderPath = "/MRO/Success"; // 成功文件夹路径
+            string SuccessFolderPath = "/MRO/Success"; // 成功文件夹路径
             Console.WriteLine("Read Smb File Start");
 
             using SmbClient client = new SmbClient(SmbHost, SmbShareName)
@@ -5015,13 +5035,13 @@ namespace Test
                     {
                         // 这里可以添加你的业务逻辑处理
                         Console.WriteLine($"成功处理文件: {file}, 共 {fileStreams.Count} 个流");
-                        
+
                         // 示例业务逻辑处理（根据实际需求调整）
                         // 这里可以添加PDF转换、数据解析等处理逻辑
-                        
+
                         // ===== 步骤4：处理完成后移动到Success文件夹 =====
                         string successFilePath = Path.Combine(SuccessFolderPath, file);
-                        
+
                         // 确保Success文件夹中不存在同名文件
                         if (client.FileIsExist(successFilePath))
                         {
@@ -5150,7 +5170,6 @@ namespace Test
         }
         #endregion
 
-
         #region 文件名校验
         public static void CheckFileName()
         {
@@ -5197,7 +5216,7 @@ namespace Test
         /// </summary>
         /// <param name="fileName"></param>
         /// <returns>返回值：Tuple<DateTime, int, string, string> 或 null（格式/类型不符）</returns>
-        public static (DateTime dateTime, int staffId, string userAd, string locationCode,string iscombine)? SplitAndValidateFileName(string fileName)
+        public static (DateTime dateTime, int staffId, string userAd, string locationCode, string iscombine)? SplitAndValidateFileName(string fileName)
         {
             // // 正则匹配基础格式
             // string pattern = @"^(?<DateTime>.+)_(?<staff_id>.+)_(?<user_ad>.+)_(?<location_code>.+)$";
@@ -5210,10 +5229,10 @@ namespace Test
             // 格式2: {DateTime}_{staff_id}_{user_ad}_{location_code}_{status}
             string pattern1 = @"^(?<DateTime>.+)_(?<staff_id>.+)_(?<user_ad>.+)_(?<location_code>.+)$";
             string pattern2 = @"^(?<DateTime>.+)_(?<staff_id>.+)_(?<user_ad>.+)_(?<location_code>.+)_(?<iscombine>[01])$";
-            
+
             Match match1 = Regex.Match(fileNameWithoutExt, pattern1);
             Match match2 = Regex.Match(fileNameWithoutExt, pattern2);
-            
+
             Match match = match2.Success ? match2 : match1;
 
             if (!match.Success)
@@ -5272,22 +5291,863 @@ namespace Test
         public static int? GetFileNameStatus(string fileName)
         {
             string fileNameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
-            
+
             // 匹配格式：{DateTime}_{staff_id}_{user_ad}_{location_code}_{status}
             string pattern = @"^(?<DateTime>.+)_(?<staff_id>.+)_(?<user_ad>.+)_(?<location_code>.+)_(?<iscombine>[01])$";
             Match match = Regex.Match(fileNameWithoutExt, pattern);
-            
+
             if (match.Success && int.TryParse(match.Groups["iscombine"].Value, out int status))
             {
                 return status;
             }
-            
+
             return null;
         }
         #endregion
 
+        #region 清理拆分Form的数据
+        public static void FormCsvCleaner()
+        {
+            string input = @"C:\\Users\\liusi\\Desktop\\FormList\\FullList.csv";
+            string output = @"C:\\Users\\liusi\\Desktop\\FormList\\cleaned_forms.csv";       // 输出文件
 
+            var lines = File.ReadAllLines(input, Encoding.UTF8);
+            var result = new List<string>();
+            result.Add("Form No.,Types of form"); // 表头
+
+            foreach (var line in lines)
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+
+                // 简单按 Tab 或 逗号 分割（你给的格式是制表符分隔）
+                var parts = line.Split(new[] { '\t', ',' }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length < 2) continue;
+
+                string formNo = parts[0].Trim();
+                string content = parts[1].Trim();
+
+                string cleanText = CleanByLanguageTag(content);
+                result.Add($"{formNo},\"{cleanText}\"");
+            }
+
+            File.WriteAllLines(output, result, new UTF8Encoding(false));
+            Console.WriteLine("完成！");
+        }
+
+        /// <summary>
+        /// 核心：根据 (English)/(Chinese) 只保留对应语言
+        /// </summary>
+        static string CleanByLanguageTag(string text)
+        {
+            bool isEnglish = text.Contains("(English)");
+            bool isChinese = text.Contains("(Chinese)");
+
+            // 先移除语言标签
+            text = Regex.Replace(text, @"\s*\((English|Chinese)\)", "").Trim();
+
+            if (isEnglish)
+            {
+                // 只保留英文、数字、符号，删除所有中文
+                return Regex.Replace(text, @"[\u4e00-\u9fa5]+", "").Trim();
+            }
+            else if (isChinese)
+            {
+                // 只保留中文，删除所有英文、数字、符号
+                return Regex.Replace(text, @"[a-zA-Z0-9\s\p{P}]", "").Trim();
+            }
+
+            return text;
+        }
+        #endregion
+
+        #region IAM Smart 签名 esign 
+
+        public class CreateResult
+        {
+            public string TargetObject { get; set; }
+            public bool IsSuccess { get; set; }
+            public string Message { get; set; }
+            public Errorcode ErrorCode { get; set; }
+        }
+
+        public class Errorcode
+        {
+            public string Code { get; set; }
+            public string Message { get; set; }
+        }
+
+
+
+        public class CallbackResult
+        {
+            public string targetObject { get; set; }
+            public bool isSuccess { get; set; }
+            public string message { get; set; }
+        }
+
+
+        public static async Task esignAsync()
+        {
+            try
+            {
+                Console.WriteLine("开始执行 IAM Smart 签名任务");
+
+                // 文件路径
+                string path = "C:\\Users\\liusi\\Desktop\\esign\\Barry 签名测试文档.pdf";
+
+                //文件路径判断
+                if (string.IsNullOrEmpty(path))
+                {
+                    Console.WriteLine("错误：文件路径不能为空");
+                    return;
+                }
+
+
+                if (!File.Exists(path))
+                {
+                    Console.WriteLine($"错误：文件不存在 - {path}");
+                    return;
+                }
+
+                //文件格式验证
+                string[] allowedExtensions = { ".pdf" };
+                string fileExtension = Path.GetExtension(path).ToLower();
+
+                if (!allowedExtensions.Contains(fileExtension))
+                {
+                    Console.WriteLine($"错误：不支持的文件格式 - {fileExtension}");
+                    Console.WriteLine($"支持的格式：{string.Join(", ", allowedExtensions)}");
+                    return;
+                }
+
+
+                // 文件大小验证（最大100MB）
+                FileInfo fileInfo = new FileInfo(path);
+                long maxFileSize = 100 * 1024 * 1024; // 100MB
+
+                if (fileInfo.Length > maxFileSize)
+                {
+                    Console.WriteLine($"错误：文件大小超过限制 - {fileInfo.Length / 1024 / 1024}MB (最大100MB)");
+                    return;
+                }
+
+                Console.WriteLine($"文件验证通过：{Path.GetFileName(path)}");
+                Console.WriteLine($"文件大小：{fileInfo.Length / 1024}KB");
+
+                //计算文件哈希
+                string documentHash = CalculateFileHash(path);
+                Console.WriteLine($"文件哈希：{documentHash}");
+
+                string bid = Guid.NewGuid().ToString("N");
+                string documentname = Path.GetFileName(path);
+                //准备API请求数据
+                var requestData = new
+                {
+                    Bid = bid,
+                    DocumentName = documentname,
+                    DocumentHash = documentHash,
+                    Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    Callbackurl = "",
+                    RedirectURI = @$"https://www.baidu.com?bid={bid}"
+                };
+
+                Console.WriteLine($"Bid: {requestData.Bid}");
+                Console.WriteLine($"时间戳: {requestData.Timestamp}");
+
+                //调用API
+                string Request = await CallApi("https://sign.nextore.io/api/ds/open-sign/create", requestData);
+
+                if (string.IsNullOrEmpty(Request))
+                {
+                    Console.WriteLine("API返回错误,停止执行");
+                    return;
+                }
+
+                CreateResult createResult = JsonSerializer.Deserialize<CreateResult>(Request);
+                if (createResult == null || createResult.IsSuccess == false)
+                {
+                    Console.WriteLine("API返回错误,停止执行");
+                    return;
+                }
+
+                //等待20秒，让用户去执行扫码签名认证。
+                Console.WriteLine("等待IAM Smart扫码签名认证");
+                await Task.Delay(10000);
+
+                var CallbackRequestData = new
+                {
+                    BusinessID = bid,
+                    CallbackType = "SignPDF"
+                };
+
+                bool Callback = true;
+                int num = 0;
+                while (Callback)
+                {
+                    num++;
+                    Console.WriteLine("开始检查IAM SmartAPI");
+                    Request = await CallApi("https://sign.nextore.io/PollingCallbackResult", CallbackRequestData);
+
+                    if (string.IsNullOrEmpty(Request))
+                    {
+                        Console.WriteLine("API返回错误,停止执行");
+                        break;
+                    }
+
+                    CallbackResult callbackResult = JsonSerializer.Deserialize<CallbackResult>(Request);
+                    if (callbackResult == null || callbackResult.isSuccess == false)
+                    {
+                        if (num == 10)
+                        {
+                            Callback = false;
+                            Console.WriteLine($"检查IAM Smart 已经达到{num}次，停止检查。");
+                            return;
+                        }
+
+                        await Task.Delay(5000);
+                        continue;
+                    }
+
+                    if (callbackResult != null && callbackResult.isSuccess == true)
+                    {
+                        // Console.WriteLine("返回OK，执行完毕");
+                        //此处可以执行签署PDF,然后下载文件。
+                        Console.WriteLine("签名验证成功，开始处理PDF文件...");
+
+                        try
+                        {
+                           //bool res=SignLocalPdf(path, callbackResult.targetObject, $"C:\\Users\\liusi\\Desktop\\esign\\signed_{DateTime.Now.ToString("yyyyMMddHHmmssfffffff")}.pdf");
+                           // if (res)
+                           // {
+                           //     Console.WriteLine("生成成功");
+                           // }
+                           // else
+                           // {
+                           //     Console.WriteLine("生成失败");
+                           // }
+                        }
+                        catch (Exception ex)
+                        {
+
+                            Console.WriteLine($"处理PDF签名时发生错误：{ex.Message}");
+                        }
+
+                        Callback = false;
+                        break;
+                    }
+                }
+
+                // 这里可以调用你的 IAM Smart 签名逻辑
+                // 例如：读取文件、计算哈希、调用 API 创建签名任务、等待返回、重新签名文件、下载文件等
+                Console.WriteLine("IAM Smart 签名任务执行完毕");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"执行 IAM Smart 签名任务时发生错误: {ex.Message}");
+
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"内部错误：{ex.InnerException.Message}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 计算文件SHA256哈希值
+        /// </summary>
+        private static string CalculateFileHash(string filePath)
+        {
+            using (var sha256 = System.Security.Cryptography.SHA256.Create())
+            using (var fileStream = File.OpenRead(filePath))
+            {
+                byte[] hashBytes = sha256.ComputeHash(fileStream);
+                return Convert.ToBase64String(hashBytes);
+            }
+        }
+
+        /// <summary>
+        /// 调用API
+        /// </summary>
+        private static async Task<string> CallApi(string apiUrl, object requestData)
+        {
+            using (var httpClient = new HttpClient())
+            {
+                httpClient.Timeout = TimeSpan.FromSeconds(30);
+
+                // 设置请求头
+                httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+
+                try
+                {
+                    // 序列化请求数据
+                    string jsonData = JsonSerializer.Serialize(requestData, new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                        WriteIndented = true
+                    });
+
+                    Console.WriteLine($"请求数据：{jsonData}");
+
+                    // 发送POST请求
+                    var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
+                    var response = await httpClient.PostAsync(apiUrl, content);
+
+                    // 检查响应状态
+                    if (response.IsSuccessStatusCode)
+                    {
+                        string responseContent = await response.Content.ReadAsStringAsync();
+                        Console.WriteLine($"API调用成功！响应：{responseContent}");
+                        return responseContent;
+                        // 可以在这里解析响应并处理后续逻辑
+                        // 例如：等待签名完成、下载签名后的文件等
+                    }
+                    else
+                    {
+                        string errorContent = await response.Content.ReadAsStringAsync();
+                        Console.WriteLine($"API调用失败！状态码：{response.StatusCode}");
+                        Console.WriteLine($"错误响应：{errorContent}");
+                    }
+                }
+                catch (HttpRequestException httpEx)
+                {
+                    Console.WriteLine($"HTTP请求错误：{httpEx.Message}");
+                }
+                catch (TaskCanceledException timeoutEx)
+                {
+                    Console.WriteLine("请求超时，请检查网络连接或稍后重试");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"API调用发生错误：{ex.Message}");
+                }
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// 载入本地PDF并完成签名
+        /// </summary>
+        /// <param name="localPdfPath">本地PDF文件路径（如：D:/test.pdf）</param>
+        /// <param name="signatureBase64">接口返回的targetObject（Base64签名）</param>
+        /// <param name="outputPdfPath">签名后保存的路径（如：D:/signed_test.pdf）</param>
+        /// <returns>是否签名成功</returns>
+        public static bool SignLocalPdf(string localPdfPath,long Timestamp, string signatureBase64, string outputPdfPath)
+        {
+            // 验证本地文件是否存在
+            if (!File.Exists(localPdfPath))
+            {
+                Console.WriteLine("本地PDF文件不存在：" + localPdfPath);
+                return false;
+            }
+
+            // 创建输出目录（如果不存在）
+            string outputFolder = Path.GetDirectoryName(outputPdfPath);
+            if (!Directory.Exists(outputFolder))
+            {
+                Directory.CreateDirectory(outputFolder);
+            }
+            // 读取本地PDF文件为Stream（核心：载入插件的关键）
+            using (FileStream pdfFileStream = new FileStream(localPdfPath, FileMode.Open, FileAccess.Read))
+            {
+                // 转换签名为字节数组
+                byte[] signatureBytes = Convert.FromBase64String(signatureBase64);
+
+                // 初始化PDF签名器（载入PDF流）
+                using (var signer = new PdfDocumentSigner(pdfFileStream, null, leaveOpen: true))
+                {
+                    // 配置签名基础信息（和你原有逻辑一致）
+                    var digestCalculator = new DigestCalculator(HashAlgorithmType.SHA256);
+                    var signerInfo = new ExternalSignerInfo(PdfSignatureType.Pkcs7, 12000, digestCalculator);
+
+                    // 配置签名位置（示例：第1页，坐标X=100, Y=100，宽200，高100）
+                    var fieldInfo = new PdfSignatureFieldInfo(new List<int> { 1 })
+                    {
+                        // SignatureBounds = new PdfRectangle(100, 100, 300, 200), // X1,Y1,X2,Y2
+                        SignatureBounds = new PdfRectangle(100, 100, 300, 200),
+                        //SignatureBounds = new PdfRectangle(50, 650, 250, 750), // 左上角：X1=50, Y1=650, X2=250, Y2=750
+                        Name = "Signature_Field"
+                    };
+
+                    // 构建延迟签名器（DevExpress核心对象）
+                    var builder = new PdfDeferredSignatureBuilder(signerInfo, fieldInfo);
+                    //builder.SigningTime = DateTimeOffset.Now;
+                    builder.SigningTime = DateTimeOffset.FromUnixTimeSeconds(Timestamp);
+                    builder.Location = "Hong Kong";
+                    builder.Name = "签名人";
+                    builder.Reason = "PDF数字签名";
+
+
+                    byte[] signatureImageBytes = null;
+
+                    string signatureImagePath = "C:\\Users\\liusi\\Desktop\\esign\\mySignature.png";
+
+
+                    if (!string.IsNullOrEmpty(signatureImagePath) && File.Exists(signatureImagePath))
+                    {
+                        signatureImageBytes = File.ReadAllBytes(signatureImagePath);
+                    }
+
+                    //byte[] signatureImageBytes = System.Convert.FromBase64String(imageContent);
+
+
+                    if (signatureImageBytes != null)
+                    {
+                        builder.SetImageData(signatureImageBytes);
+                    }
+
+                    // 载入签名器并计算摘要
+                    PdfDeferredSigner deferredSigner = signer.SignDeferred(builder);
+
+                    var documentHash = Convert.ToBase64String(deferredSigner.HashValue);
+
+                    Console.WriteLine($"SignLocalPdf 计算的Hash：{documentHash}");
+
+                    // 写入签名并保存文件（核心：把接口返回的签名写入PDF）
+                    deferredSigner.Sign(outputPdfPath, signatureBytes);
+
+                    Console.WriteLine("签名完成，文件保存至：" + outputPdfPath);
+                    return true;
+                }
+            }
+        }
+
+
+
+        public static async Task EsignSignLocalPdfAsync()
+        {
+            try
+            {
+                Console.WriteLine("开始执行 IAM Smart 签名任务");
+
+                // 文件路径
+                string path = "C:\\Users\\liusi\\Desktop\\esign\\Barry 签名测试文档.pdf";
+
+                //文件路径判断
+                if (string.IsNullOrEmpty(path))
+                {
+                    Console.WriteLine("错误：文件路径不能为空");
+                    return;
+                }
+
+
+                if (!File.Exists(path))
+                {
+                    Console.WriteLine($"错误：文件不存在 - {path}");
+                    return;
+                }
+
+                //文件格式验证
+                string[] allowedExtensions = { ".pdf" };
+                string fileExtension = Path.GetExtension(path).ToLower();
+
+                if (!allowedExtensions.Contains(fileExtension))
+                {
+                    Console.WriteLine($"错误：不支持的文件格式 - {fileExtension}");
+                    Console.WriteLine($"支持的格式：{string.Join(", ", allowedExtensions)}");
+                    return;
+                }
+
+
+                // 文件大小验证（最大100MB）
+                FileInfo fileInfo = new FileInfo(path);
+                long maxFileSize = 100 * 1024 * 1024; // 100MB
+
+                if (fileInfo.Length > maxFileSize)
+                {
+                    Console.WriteLine($"错误：文件大小超过限制 - {fileInfo.Length / 1024 / 1024}MB (最大100MB)");
+                    return;
+                }
+
+                Console.WriteLine($"文件验证通过：{Path.GetFileName(path)}");
+                Console.WriteLine($"文件大小：{fileInfo.Length / 1024}KB");
+
+                //定义一个公共时间戳
+                long Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+
+
+                // 预处理 PDF，保存为临时文件
+                string tempPdfPath = Path.Combine(Path.GetDirectoryName(path), "temp_" + Path.GetFileName(path));
+
+                using (FileStream pdfFileStream = new FileStream(path, FileMode.Open, FileAccess.Read))
+                {
+                    pdfFileStream.Position = 0; // 每次循环开始时重置文件流位置
+                    using var ms = new MemoryStream();
+                    pdfFileStream.CopyTo(ms);
+                    var buffer = UpgradePDFForSigning(ms.ToArray(), false);
+                    //using var Upgradestream = new MemoryStream(buffer);
+                    File.WriteAllBytes(tempPdfPath, buffer);
+                }
+
+                Console.WriteLine($"预处理完成，临时文件：{tempPdfPath}");
+
+                path = tempPdfPath;
+
+                string targetObject = string.Empty;
+                // 读取本地PDF文件为Stream（核心：载入插件的关键）
+                using (FileStream pdfFileStream = new FileStream(path, FileMode.Open, FileAccess.Read))
+                {
+                    // 初始化PDF签名器（载入PDF流）
+                    using (var signer = new PdfDocumentSigner(pdfFileStream, null, leaveOpen: true))
+                    {
+                        // 配置签名基础信息（和你原有逻辑一致）
+                        var digestCalculator = new DigestCalculator(HashAlgorithmType.SHA256);
+                        var signerInfo = new ExternalSignerInfo(PdfSignatureType.Pkcs7, 12000, digestCalculator);
+
+                        // 配置签名位置（示例：第1页，坐标X=100, Y=100，宽200，高100）
+                        var fieldInfo = new PdfSignatureFieldInfo(new List<int> { 1 })
+                        {
+                            // SignatureBounds = new PdfRectangle(100, 100, 300, 200), // X1,Y1,X2,Y2
+                            SignatureBounds = new PdfRectangle(100, 100, 300, 200),
+                            //SignatureBounds = new PdfRectangle(50, 650, 250, 750), // 左上角：X1=50, Y1=650, X2=250, Y2=750
+                            Name = "Signature_Field"
+                        };
+
+
+
+                        // 构建延迟签名器（DevExpress核心对象）
+                        var builder = new PdfDeferredSignatureBuilder(signerInfo, fieldInfo);
+                        //builder.SigningTime = DateTimeOffset.Now;
+                        builder.SigningTime = DateTimeOffset.FromUnixTimeSeconds(Timestamp);
+                        builder.Location = "Hong Kong";
+                        builder.Name = "签名人";
+                        builder.Reason = "PDF数字签名";
+
+
+                        byte[] signatureImageBytes = null;
+
+                        string signatureImagePath = "C:\\Users\\liusi\\Desktop\\esign\\mySignature.png";
+
+
+                        if (!string.IsNullOrEmpty(signatureImagePath) && File.Exists(signatureImagePath))
+                        {
+                            signatureImageBytes = File.ReadAllBytes(signatureImagePath);
+                        }
+
+                        //byte[] signatureImageBytes = System.Convert.FromBase64String(imageContent);
+
+
+                        if (signatureImageBytes != null)
+                        {
+                            builder.SetImageData(signatureImageBytes);
+                        }
+
+                        // 载入签名器并计算摘要
+                        PdfDeferredSigner deferredSigner = signer.SignDeferred(builder);
+
+                        var documentHash = Convert.ToBase64String(deferredSigner.HashValue);
+
+                        Console.WriteLine($"EsignSignLocalPdfAsync 计算的Hash：{documentHash}");
+
+                        string bid = Guid.NewGuid().ToString("N");
+                        string documentname = Path.GetFileName(path);
+
+
+                        //准备API请求数据
+                        var requestData = new
+                        {
+                            Bid = bid,
+                            DocumentName = documentname,
+                            DocumentHash = documentHash,
+                            Timestamp = Timestamp,
+                            Callbackurl = "",
+                            RedirectURI = @$"https://www.baidu.com?bid={bid}"
+                        };
+
+                        Console.WriteLine($"Bid: {requestData.Bid}");
+                        Console.WriteLine($"时间戳: {requestData.Timestamp}");
+
+                        //调用API
+                        string Request = await CallApi("https://sign.nextore.io/api/ds/open-sign/create", requestData);
+
+                        if (string.IsNullOrEmpty(Request))
+                        {
+                            Console.WriteLine("API返回错误,停止执行");
+                            return;
+                        }
+
+                        CreateResult createResult = JsonSerializer.Deserialize<CreateResult>(Request);
+                        if (createResult == null || createResult.IsSuccess == false)
+                        {
+                            Console.WriteLine("API返回错误,停止执行");
+                            return;
+                        }
+
+                        //等待20秒，让用户去执行扫码签名认证。
+                        Console.WriteLine("等待IAM Smart扫码签名认证");
+                        await Task.Delay(10000);
+
+                        var CallbackRequestData = new
+                        {
+                            BusinessID = bid,
+                            CallbackType = "SignPDF"
+                        };
+
+                        bool Callback = true;
+                        int num = 0;
+                        while (Callback)
+                        {
+                            num++;
+                            Console.WriteLine("开始检查IAM SmartAPI");
+                            Request = await CallApi("https://sign.nextore.io/PollingCallbackResult", CallbackRequestData);
+
+                            if (string.IsNullOrEmpty(Request))
+                            {
+                                Console.WriteLine("API返回错误,停止执行");
+                                break;
+                            }
+
+                            CallbackResult callbackResult = JsonSerializer.Deserialize<CallbackResult>(Request);
+                            if (callbackResult == null || callbackResult.isSuccess == false)
+                            {
+                                if (num == 10)
+                                {
+                                    Callback = false;
+                                    Console.WriteLine($"检查IAM Smart 已经达到{num}次，停止检查。");
+                                    return;
+                                }
+
+                                await Task.Delay(5000);
+                                continue;
+                            }
+
+                            if (callbackResult != null && callbackResult.isSuccess == true)
+                            {
+                                // Console.WriteLine("返回OK，执行完毕");
+                                //此处可以执行签署PDF,然后下载文件。
+                                Console.WriteLine("签名验证成功，开始处理PDF文件...");
+                                targetObject = callbackResult.targetObject;
+                                //try
+                                //{
+                                //    // 转换签名为字节数组
+                                //    byte[] signatureBytes = Convert.FromBase64String(callbackResult.targetObject);
+
+                                //    // 写入签名并保存文件（核心：把接口返回的签名写入PDF）
+                                //    string outputPdfPath = $"C:\\Users\\liusi\\Desktop\\esign\\signed_{DateTime.Now.ToString("yyyyMMddHHmmssfffffff")}.pdf";
+                                //    deferredSigner.Sign(outputPdfPath, signatureBytes);
+                                //    Console.WriteLine("签名完成，文件保存至：" + outputPdfPath);
+                                //}
+                                //catch (Exception ex)
+                                //{
+
+                                //    Console.WriteLine($"处理PDF签名时发生错误：{ex.Message}");
+                                //}
+
+                                Callback = false;
+                                break;
+                            }
+
+                        }
+                    }
+                }
+
+
+                string outputPdfPath = $"C:\\Users\\liusi\\Desktop\\esign\\signed_{DateTime.Now.ToString("yyyyMMddHHmmssfffffff")}.pdf";
+                //最后开始重现
+                SignLocalPdf(path, Timestamp, targetObject, outputPdfPath);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+}
+
+
+        public static async Task TestFileHash()
+        {
+
+            Console.WriteLine("开始执行 IAM Smart 签名任务");
+
+            // 文件路径
+            string path = "C:\\Users\\liusi\\Desktop\\esign\\Barry 签名测试文档.pdf";
+
+            //文件路径判断
+            if (string.IsNullOrEmpty(path))
+            {
+                Console.WriteLine("错误：文件路径不能为空");
+                return;
+            }
+
+
+            if (!File.Exists(path))
+            {
+                Console.WriteLine($"错误：文件不存在 - {path}");
+                return;
+            }
+
+            //文件格式验证
+            string[] allowedExtensions = { ".pdf" };
+            string fileExtension = Path.GetExtension(path).ToLower();
+
+            if (!allowedExtensions.Contains(fileExtension))
+            {
+                Console.WriteLine($"错误：不支持的文件格式 - {fileExtension}");
+                Console.WriteLine($"支持的格式：{string.Join(", ", allowedExtensions)}");
+                return;
+            }
+
+
+            // 文件大小验证（最大100MB）
+            FileInfo fileInfo = new FileInfo(path);
+            long maxFileSize = 100 * 1024 * 1024; // 100MB
+
+            if (fileInfo.Length > maxFileSize)
+            {
+                Console.WriteLine($"错误：文件大小超过限制 - {fileInfo.Length / 1024 / 1024}MB (最大100MB)");
+                return;
+            }
+
+            Console.WriteLine($"文件验证通过：{Path.GetFileName(path)}");
+            Console.WriteLine($"文件大小：{fileInfo.Length / 1024}KB");
+
+            //定义一个公共时间戳
+            long Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+            bool whileVal = true;
+            int num = 0;
+
+            // 预处理 PDF，保存为临时文件
+            string tempPdfPath = Path.Combine(Path.GetDirectoryName(path), "temp_" + Path.GetFileName(path));
+
+
+            using (FileStream pdfFileStream = new FileStream(path, FileMode.Open, FileAccess.Read))
+            {
+                pdfFileStream.Position = 0; // 每次循环开始时重置文件流位置
+                using var ms = new MemoryStream();
+                pdfFileStream.CopyTo(ms);
+                var buffer = UpgradePDFForSigning(ms.ToArray(), false);
+                //using var Upgradestream = new MemoryStream(buffer);
+                File.WriteAllBytes(tempPdfPath, buffer);
+            }
+
+            Console.WriteLine($"预处理完成，临时文件：{tempPdfPath}");
+            while (whileVal)
+            {
+                using (FileStream tempFileStream = new FileStream(tempPdfPath, FileMode.Open, FileAccess.Read))
+                // 初始化PDF签名器（载入PDF流）
+                using (var signer = new PdfDocumentSigner(tempFileStream, null, leaveOpen: true))
+                {
+                    num++;
+                    // 配置签名基础信息（和你原有逻辑一致）
+                    var digestCalculator = new DigestCalculator(HashAlgorithmType.SHA256);
+                    var signerInfo = new ExternalSignerInfo(PdfSignatureType.Pkcs7, 12000, digestCalculator);
+
+                    // 配置签名位置（示例：第1页，坐标X=100, Y=100，宽200，高100）
+                    var fieldInfo = new PdfSignatureFieldInfo(new List<int> { 1 })
+                    {
+                        // SignatureBounds = new PdfRectangle(100, 100, 300, 200), // X1,Y1,X2,Y2
+                        SignatureBounds = new PdfRectangle(100, 100, 300, 200),
+                        //SignatureBounds = new PdfRectangle(50, 650, 250, 750), // 左上角：X1=50, Y1=650, X2=250, Y2=750
+                        Name = "Signature_Field"
+                    };
+
+
+                    // 构建延迟签名器（DevExpress核心对象）
+                    var builder = new PdfDeferredSignatureBuilder(signerInfo, fieldInfo);
+                    //builder.SigningTime = DateTimeOffset.Now;
+                    builder.SigningTime = DateTimeOffset.FromUnixTimeSeconds(Timestamp);
+                    builder.Location = "Hong Kong";
+                    builder.Name = "签名人";
+                    builder.Reason = "PDF数字签名";
+
+                    byte[] signatureImageBytes = null;
+
+                    string signatureImagePath = "C:\\Users\\liusi\\Desktop\\esign\\mySignature.png";
+
+                    if (!string.IsNullOrEmpty(signatureImagePath) && File.Exists(signatureImagePath))
+                    {
+                        signatureImageBytes = File.ReadAllBytes(signatureImagePath);
+                    }
+
+                    //byte[] signatureImageBytes = System.Convert.FromBase64String(imageContent);
+
+
+                    if (signatureImageBytes != null)
+                    {
+                        builder.SetImageData(signatureImageBytes);
+                    }
+
+                    // 载入签名器并计算摘要
+                    PdfDeferredSigner deferredSigner = signer.SignDeferred(builder);
+
+                    var documentHash = Convert.ToBase64String(deferredSigner.HashValue);
+
+                    Console.WriteLine($"第{num}次：TestFileHash 计算的Hash：{documentHash}");
+                }
+
+                //等待一会
+                Console.WriteLine("等待下次校验");
+                await Task.Delay(5000);
+            }
+          
+        }
+
+        public static byte[] UpgradePDFForSignature(byte[] pdf)
+        {
+            // if pdf contains any signatures, no need upgrade pdf for signing
+            using (var signer = new PdfDocumentSigner(new MemoryStream(pdf)))
+            {
+                if (signer.GetSignatureInfo().Count > 0)
+                {
+                    return pdf;
+                }
+            }
+
+            using (PdfDocumentProcessor processor = new PdfDocumentProcessor())
+            {
+                var memoryStream = new MemoryStream();
+                processor.LoadDocument(new MemoryStream(pdf));
+                processor.SaveDocument(memoryStream);
+
+                return memoryStream.ToArray();
+            }
+        }
+
+        public static byte[] UpgradePDFForSigning(byte[] pdf, bool forceUpgrade)
+        {
+            DateTimeOffset now = DateTimeOffset.Now;
+            if (forceUpgrade || !testHash(pdf, now).SequenceEqual(testHash(pdf, now)))
+            {
+                //Log4Net.AddLog("forceUpgrade PDF");
+                using (PdfDocumentProcessor processor = new PdfDocumentProcessor())
+                {
+                    var memoryStream = new MemoryStream();
+                    processor.LoadDocument(new MemoryStream(pdf));
+                    processor.SaveDocument(memoryStream);
+
+                    return memoryStream.ToArray();
+                }
+            }
+            return pdf;
+        }
+
+        public static byte[] testHash(byte[] pdf, DateTimeOffset signingTime)
+        {
+            using (var signer = new PdfDocumentSigner(new MemoryStream(pdf)))
+            {
+                var description = new PdfSignatureFieldInfo(1);
+                description.Name = "TEST";
+
+                var digestCalculator = new DigestCalculator(HashAlgorithmType.SHA256);
+
+                var signerInfo = new ExternalSignerInfo(PdfSignatureType.Pkcs7, 12000, digestCalculator);
+
+                //Apply the metadata to the form field: 
+                var pdfDeferredSignatureBuilder = new PdfDeferredSignatureBuilder(signerInfo, description);
+                pdfDeferredSignatureBuilder.SigningTime = signingTime;
+
+                //Add the signature to the document:
+                var deferredSigner = signer.SignDeferred(pdfDeferredSignatureBuilder);
+
+                //Obtain the document hash and hash algorithm's object identifier:
+                var digest = deferredSigner.HashValue;
+                //Log4Net.AddLog($"testHash PDF:{Convert.ToBase64String(digest)}");
+                return digest;
+            }
+
+        }
     }
+    #endregion
 }
 
 
