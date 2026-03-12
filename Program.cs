@@ -2,6 +2,8 @@
 using DevExpress.Pdf;
 using Org.BouncyCastle.Crypto.Agreement;
 using Org.BouncyCastle.Utilities.Zlib;
+using PuppeteerSharp;
+using PuppeteerSharp.Media;
 using Renci.SshNet;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -52,8 +54,14 @@ namespace Test
 
             //IAM Smart 签名 esign 
             //esignAsync();
-            //EsignSignLocalPdfAsync();
-            TestFileHash();
+            EsignSignLocalPdfAsync();
+            //TestFileHash();
+
+
+
+            //Html导出为PDF
+            //htmltopdf();
+
             Console.WriteLine();
             Console.ReadKey();
 
@@ -5516,15 +5524,15 @@ namespace Test
 
                         try
                         {
-                           //bool res=SignLocalPdf(path, callbackResult.targetObject, $"C:\\Users\\liusi\\Desktop\\esign\\signed_{DateTime.Now.ToString("yyyyMMddHHmmssfffffff")}.pdf");
-                           // if (res)
-                           // {
-                           //     Console.WriteLine("生成成功");
-                           // }
-                           // else
-                           // {
-                           //     Console.WriteLine("生成失败");
-                           // }
+                            //bool res=SignLocalPdf(path, callbackResult.targetObject, $"C:\\Users\\liusi\\Desktop\\esign\\signed_{DateTime.Now.ToString("yyyyMMddHHmmssfffffff")}.pdf");
+                            // if (res)
+                            // {
+                            //     Console.WriteLine("生成成功");
+                            // }
+                            // else
+                            // {
+                            //     Console.WriteLine("生成失败");
+                            // }
                         }
                         catch (Exception ex)
                         {
@@ -5631,7 +5639,7 @@ namespace Test
         /// <param name="signatureBase64">接口返回的targetObject（Base64签名）</param>
         /// <param name="outputPdfPath">签名后保存的路径（如：D:/signed_test.pdf）</param>
         /// <returns>是否签名成功</returns>
-        public static bool SignLocalPdf(string localPdfPath,long Timestamp, string signatureBase64, string outputPdfPath)
+        public static bool SignLocalPdf(string localPdfPath, long Timestamp, string signatureBase64, string outputPdfPath)
         {
             // 验证本地文件是否存在
             if (!File.Exists(localPdfPath))
@@ -5950,7 +5958,7 @@ namespace Test
             {
                 Console.WriteLine(ex.Message);
             }
-}
+        }
 
 
         public static async Task TestFileHash()
@@ -6079,7 +6087,7 @@ namespace Test
                 Console.WriteLine("等待下次校验");
                 await Task.Delay(5000);
             }
-          
+
         }
 
         public static byte[] UpgradePDFForSignature(byte[] pdf)
@@ -6148,6 +6156,61 @@ namespace Test
         }
     }
     #endregion
+
+        #region Html导出为PDF
+        public static async Task htmltopdf()
+        {
+
+            // 替换为你的实际 HTML 内容（或从文件读取）
+            string htmlContent = File.ReadAllText(@"C:\Users\liusi\Desktop\htmltopdf\test.html");
+
+            try
+            {
+                Console.WriteLine("启动浏览器中（首次运行会自动下载 Chromium，耐心等待）...");
+                new BrowserFetcher().DownloadAsync().Wait();
+
+                using var browser = await Puppeteer.LaunchAsync(new LaunchOptions
+                {
+                    Headless = true, // 无头模式，不显示浏览器窗口
+                    Args = new[] { "--no-sandbox", "--disable-setuid-sandbox" } // 解决权限问题
+                });
+
+
+                using var page = await browser.NewPageAsync();
+                //await page.SetContentAsync(htmlContent);
+
+                // 👇 关键：等待页面渲染完成
+                //await page.WaitForNetworkIdleAsync(); // 等待网络空闲
+                // 或者等待某个元素出现
+                // await page.WaitForSelectorAsync("body");
+
+
+                // 访问本地服务器上的 HTML
+                await page.GoToAsync("http://127.0.0.1:5500/test.html", WaitUntilNavigation.Networkidle0);
+
+                // 👇 关键：等待表单完全渲染
+                await page.WaitForSelectorAsync("#formDiv", new WaitForSelectorOptions { Timeout = 30000 });
+
+                // 额外等待确保所有动态内容加载完成
+                await Task.Delay(3000);
+
+                // 生成 PDF（指定绝对路径，避免找不到文件）
+                string pdfPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"{Guid.NewGuid()}.pdf");
+                await page.PdfAsync(pdfPath, new PdfOptions
+                {
+                    Format = PaperFormat.A4,
+                    PrintBackground = true
+                });
+
+                Console.WriteLine($"PDF 已生成：{pdfPath}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"错误：{ex.Message}");
+            }
+        }
+        #endregion
+    }
 }
 
 
