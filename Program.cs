@@ -13,6 +13,8 @@ using SMBLibrary;
 using SMBLibrary.Client;
 using System.Diagnostics.Metrics;
 using System.Net;
+using System.Net.Http.Json;
+using System.Net.WebSockets;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
@@ -54,13 +56,20 @@ namespace Test
 
             //IAM Smart 签名 esign 
             //esignAsync();
-            EsignSignLocalPdfAsync();
+            //EsignSignLocalPdfAsync();
             //TestFileHash();
 
 
 
             //Html导出为PDF
-            //htmltopdf();
+            htmltopdf();
+
+            //retry
+            //retry();
+
+            //飞书长连接
+            //await feishu();
+
 
             Console.WriteLine();
             Console.ReadKey();
@@ -774,8 +783,8 @@ namespace Test
         public static void Zxing()
         {
             DateTime Pstarttime = DateTime.Now;
-            string folderPath = @"C:\Users\liusi\Desktop\PRD";
-            string SaveImageFile = @"C:\Users\liusi\Desktop\PRDDemo";
+            string folderPath = @"C:\Users\liusi\Desktop\Zxing";
+            string SaveImageFile = @"C:\Users\liusi\Desktop\ZxingDemo";
             // 检查文件夹是否存在
             if (!Directory.Exists(folderPath))
             {
@@ -5773,7 +5782,7 @@ namespace Test
                 long Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
 
-
+                string oldpath = path;
                 // 预处理 PDF，保存为临时文件
                 string tempPdfPath = Path.Combine(Path.GetDirectoryName(path), "temp_" + Path.GetFileName(path));
 
@@ -5859,7 +5868,7 @@ namespace Test
                             DocumentHash = documentHash,
                             Timestamp = Timestamp,
                             Callbackurl = "",
-                            RedirectURI = @$"https://www.baidu.com?bid={bid}"
+                            RedirectURI = @$"http://xxxx.yyy:8080/CheckeSign?bid={bid}&objid=5159"
                         };
 
                         Console.WriteLine($"Bid: {requestData.Bid}");
@@ -6154,8 +6163,8 @@ namespace Test
             }
 
         }
-    }
-    #endregion
+
+        #endregion
 
         #region Html导出为PDF
         public static async Task htmltopdf()
@@ -6208,6 +6217,38 @@ namespace Test
             {
                 Console.WriteLine($"错误：{ex.Message}");
             }
+        }
+        #endregion
+
+        #region retry
+        public static void retry()
+        {
+
+            int maxRetryNum = 3;
+            int retryNum = 0;
+
+            //retry
+            while (retryNum < maxRetryNum)
+            {
+                //將Barcode識別單獨處理,錯誤后不影響程序
+                try
+                {
+                    retryNum++;
+                    Console.WriteLine($"retryNum:{retryNum}");
+
+                    int xxx = Convert.ToInt32("xxxx");
+
+                    retryNum = maxRetryNum;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"maxRetryNum:{maxRetryNum},retryNum:{retryNum}");
+                    // 加个延迟，重试间隔 1 秒
+                    System.Threading.Thread.Sleep(1000);
+                }
+            }
+
+            Console.WriteLine("Over");
         }
         #endregion
     }
