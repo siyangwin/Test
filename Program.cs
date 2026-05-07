@@ -1,5 +1,7 @@
-﻿using DevExpress.Office.DigitalSignatures;
+﻿using Aspose.BarCode.BarCodeRecognition;
+using DevExpress.Office.DigitalSignatures;
 using DevExpress.Pdf;
+using OpenCvSharp;
 using Org.BouncyCastle.Crypto.Agreement;
 using Org.BouncyCastle.Utilities.Zlib;
 using PuppeteerSharp;
@@ -33,6 +35,7 @@ namespace Test
         static async Task Main(string[] args)
         {
             //Zxing();
+            OpenCv();
             //ChangeImages();
             //OCRChange();
             //OCRImage();
@@ -62,7 +65,7 @@ namespace Test
 
 
             //Html导出为PDF
-            htmltopdf();
+            //htmltopdf();
 
             //retry
             //retry();
@@ -822,7 +825,6 @@ namespace Test
             int successCount = 0;
             int failCount = 0;
 
-
             // 循环识别每个图片文件
             for (int i = 0; i < imageFiles.Count; i++)
             {
@@ -1007,7 +1009,7 @@ namespace Test
                 Console.WriteLine($"图片总耗时: {duration.TotalSeconds} 秒");
                 Console.WriteLine("--------------------------------------------------");
             }
-
+            
             // 输出统计结果
             Console.WriteLine("\n==================================================");
             Console.WriteLine("识别统计结果：");
@@ -1100,6 +1102,8 @@ namespace Test
 
             try
             {
+               //var xxx = DetectBarcodesAspose(imageStream);
+
                 using var skBitmap = SKBitmap.Decode(imageStream);
                 if (skBitmap == null)
                 {
@@ -1501,7 +1505,23 @@ namespace Test
             }
         }
 
-
+        // No Aspose.Barcode license
+        public static List<DetectedObject> DetectBarcodesAspose(Stream imageStream)
+        {
+            var detectedObjects = new List<DetectedObject>();
+            using (var reader = new BarCodeReader(imageStream, DecodeType.QR, DecodeType.Code128))
+            {
+                foreach (BarCodeResult result in reader.ReadBarCodes())
+                {
+                    detectedObjects.Add(new DetectedObject
+                    {
+                        Type = result.CodeTypeName,
+                        Content = result.CodeText
+                    });
+                }
+            }
+            return detectedObjects;
+        }
 
         private static bool QuickDetectQRCode(SKBitmap bitmap)
         {
@@ -1548,11 +1568,11 @@ namespace Test
         private static List<DetectedObject> TryDecodeDirect(SKBitmap original, Func<BarcodeFormat, BarcodeReaderGeneric> createReader)
         {
             var results = new List<DetectedObject>();
-
             try
             {
                 var luminanceSource = new SKBitmapLuminanceSource(original);
                 var reader = createReader(BarcodeFormat.QR_CODE);
+
                 var decodeResults = reader.DecodeMultiple(luminanceSource);
 
                 if (decodeResults != null)
@@ -2335,6 +2355,117 @@ namespace Test
             {
                 Console.WriteLine($"标记最左边二维码失败：{ex.Message}");
             }
+        }
+        #endregion
+
+        #region
+
+        // 指定你的模型文件路径（确保在 Linux 服务器上这些文件也存在）
+        static string detect_prototxt = Path.Combine("data", "wechat_qrcode", "detect.prototxt");
+        static string detect_caffemodel = Path.Combine("data", "wechat_qrcode", "detect.caffemodel");
+        static string sr_prototxt = Path.Combine("data", "wechat_qrcode", "sr.prototxt");
+        static string sr_caffemodel = Path.Combine("data", "wechat_qrcode", "sr.caffemodel");
+        public static void OpenCv()
+        {
+            DateTime Pstarttime = DateTime.Now;
+            string folderPath = @"C:\Users\liusi\Desktop\Zxing";
+            string SaveImageFile = @"C:\Users\liusi\Desktop\ZxingDemo";
+            // 检查文件夹是否存在
+            if (!Directory.Exists(folderPath))
+            {
+                Console.WriteLine($"文件夹不存在：{folderPath}");
+                return;
+            }
+
+            // 获取文件夹中所有支持的图片格式
+            string[] imageExtensions = { "*.jpg", "*.jpeg", "*.png", "*.bmp", "*.gif", "*.tiff", "*.tif" };
+            List<string> imageFiles = new List<string>();
+
+            foreach (string extension in imageExtensions)
+            {
+                try
+                {
+                    string[] files = Directory.GetFiles(folderPath, extension, SearchOption.AllDirectories);
+                    imageFiles.AddRange(files);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"搜索 {extension} 文件时出错：{ex.Message}");
+                }
+            }
+
+            if (imageFiles.Count == 0)
+            {
+                Console.WriteLine($"文件夹中没有找到图片文件：{folderPath}");
+                return;
+            }
+
+            Console.WriteLine($"找到 {imageFiles.Count} 个图片文件，开始识别...");
+            Console.WriteLine("==================================================");
+
+            int totalImages = imageFiles.Count;
+            int successCount = 0;
+            int failCount = 0;
+
+
+            //Code.Scan();
+            //Code code = new Code();
+            using (Code code = new Code())
+            {
+                // 循环识别每个图片文件
+                for (int i = 0; i < imageFiles.Count; i++)
+                {
+                    DateTime starttime = DateTime.Now;
+                    string imagePath = imageFiles[i];
+                    string fileName = Path.GetFileName(imagePath);
+
+                    Console.WriteLine($"\n[{i + 1}/{totalImages}] 正在识别：{fileName}");
+                    Console.WriteLine($"文件路径：{imagePath}");
+
+                    try
+                    {
+                        var OpenCVresults = code.DecodeByOpenCV(imagePath);
+
+                        // 处理识别结果
+                        if (OpenCVresults != null && OpenCVresults.Count > 0)
+                        {
+                            successCount++;
+                            Console.WriteLine($"  识别成功！找到 {OpenCVresults.Count} 个二维码：");
+                            foreach (var result in OpenCVresults)
+                            {
+                                Console.WriteLine($"    内容：{result}");
+                            }
+                        }
+                        else
+                        {
+                            failCount++;
+                            Console.WriteLine($"  识别失败：未找到二维码");
+                        }
+                        continue;
+                    }
+                    catch (Exception ex)
+                    {
+                        failCount++;
+                        Console.WriteLine($"  识别失败：{ex.Message}");
+                    }
+                    DateTime endtime = DateTime.Now;
+                    TimeSpan duration = endtime - starttime;
+                    Console.WriteLine($"图片总耗时: {duration.TotalSeconds} 秒");
+                    Console.WriteLine("--------------------------------------------------");
+                }
+            }
+            // 输出统计结果
+            Console.WriteLine("\n==================================================");
+            Console.WriteLine("识别统计结果：");
+            Console.WriteLine($"总图片数：{totalImages}");
+            Console.WriteLine($"识别成功：{successCount}");
+            Console.WriteLine($"识别失败：{failCount}");
+            Console.WriteLine($"成功率：{((double)successCount / totalImages * 100):F2}%");
+
+            DateTime Pendtime = DateTime.Now;
+            TimeSpan Pduration = Pendtime - Pstarttime;
+            Console.WriteLine($"程序总耗时: {Pduration.TotalSeconds} 秒");
+
         }
         #endregion
 
