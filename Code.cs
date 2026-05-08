@@ -9,12 +9,14 @@ namespace Test
     /// </summary>
     public class Code:IDisposable
     {
-
+        // 模型目录：程序运行目录下 models 文件夹
+        //var baseDir = AppDomain.CurrentDomain.BaseDirectory;
         // 指定你的模型文件路径（确保在 Linux 服务器上这些文件也存在）
         static string detect_prototxt = Path.Combine("data", "wechat_qrcode", "detect.prototxt");
         static string detect_caffemodel = Path.Combine("data", "wechat_qrcode", "detect.caffemodel");
         static string sr_prototxt = Path.Combine("data", "wechat_qrcode", "sr.prototxt");
         static string sr_caffemodel = Path.Combine("data", "wechat_qrcode", "sr.caffemodel");
+
 
         #region Teru.Code.WechatQrcode.Lite  Nget
         //static WeChatQRCode opencvDecoder;
@@ -285,7 +287,7 @@ namespace Test
                 weChatQRCode = new WeChatQRCode(detect_prototxt, detect_caffemodel, sr_prototxt, sr_caffemodel);
 
                 // 等待OpenCV底层资源完全初始化
-                System.Threading.Thread.Sleep(1000); // 等待1秒
+                //System.Threading.Thread.Sleep(1000); // 等待1秒
 
                 Console.WriteLine("✅ WeChatQRCode初始化成功");
             }
@@ -308,7 +310,7 @@ namespace Test
             }
 
             // 2. 添加重试机制，解决inv_scale_x > 0错误和资源竞争问题
-            int maxRetries = 3;
+            int maxRetries = 4;
             for (int retry = 0; retry < maxRetries; retry++)
             {
                 try
@@ -329,7 +331,52 @@ namespace Test
                             // 复制原图
                             image.CopyTo(processedImage);
 
-                            // 6. 图像预处理
+                            if (retry == 1)
+                            {
+                                // 图像增强（可选，根据实际效果调整参数）
+                                Cv2.ConvertScaleAbs(processedImage, processedImage, 1.6, 30);
+                            }
+                            else if (retry == 2)
+                            {
+                                // 图像增强（可选，根据实际效果调整参数）
+                                Cv2.ConvertScaleAbs(processedImage, processedImage, 1.9, 30);
+                                //using var gray = new Mat();
+                                // 1. 强制转灰度（微信识别对灰度图响应最快）
+                                if (processedImage.Channels() == 3)
+                                    Cv2.CvtColor(processedImage, processedImage, ColorConversionCodes.BGR2GRAY);
+                                else
+                                    processedImage.CopyTo(processedImage);
+
+                                // 2. 直方图均衡化（如果图片太暗或对比度低，这一步是神技）
+                                Cv2.EqualizeHist(processedImage, processedImage);
+
+                                //Cv2.MorphologyEx(processedImage, processedImage, MorphTypes.Close, Cv2.GetStructuringElement(MorphShapes.Rect, new OpenCvSharp.Size(1, 1)));
+                                //终极二值化 + 去噪--降低識別率
+                                //Cv2.Threshold(processedImage, processedImage, 110, 255, ThresholdTypes.Binary);
+                                //Cv2.MedianBlur(processedImage, processedImage, 3);
+                            }
+                            else if (retry == 3)
+                            {
+                                // 第4次：切块识别，直接救回最后那张！
+                                bool success = SplitAndDetect(image, weChatQRCode, results);
+                                if (success)
+                                {
+                                    break; // 识别到了，直接退出
+                                }
+                            }
+
+
+                            //bool useEnhance = retry >= 1; // 第一次不增强，失败后增强
+                            //if (useEnhance)
+                            //{
+                            //    for (int i = 0; i < retry; i++)
+                            //    {
+                            //        ProcessImageForQr(processedImage, processedImage);
+                            //    }
+                            //}
+
+
+                            // 图像预处理
                             // 如果图片太小，进行放大（保持宽高比）
                             if (processedImage.Width < 64 || processedImage.Height < 64)
                             {
@@ -339,25 +386,7 @@ namespace Test
                                     (int)(processedImage.Height * scale)));
                             }
 
-                            if (retry == 1)
-                            {
-                                // 图像增强（可选，根据实际效果调整参数）
-                                Cv2.ConvertScaleAbs(processedImage, processedImage, 1.3, 30);
-                            }
-                            else if (retry == 2)
-                            {
-                                // 图像增强（可选，根据实际效果调整参数）
-                                Cv2.ConvertScaleAbs(processedImage, processedImage, 1.6, 30);
-                                //using var gray = new Mat();
-                                //// 1. 强制转灰度（微信识别对灰度图响应最快）
-                                //if (processedImage.Channels() == 3)
-                                //    Cv2.CvtColor(processedImage, processedImage, ColorConversionCodes.BGR2GRAY);
-                                //else
-                                //    processedImage.CopyTo(processedImage);
-
-                                //// 2. 直方图均衡化（如果图片太暗或对比度低，这一步是神技）
-                                //Cv2.EqualizeHist(processedImage, processedImage);
-                            }
+                         
 
                             Mat[] rects = null;
                             string[] texts = null;
@@ -435,6 +464,63 @@ namespace Test
             }
 
             return results;
+        }
+
+        // 水平三等分（左、中、右），只要任意一块识别到就成功
+        private bool SplitAndDetect(Mat src, WeChatQRCode qr, List<string> results)
+        {
+            int w = src.Width;
+            int h = src.Height;
+
+            //水平分
+            int stepX = w / 3;
+            //int overlap = 20; // 重叠像素，防止切断二维码
+            int overlapX = stepX / 2;
+
+            //垂直分
+            int stepY = h / 3;
+            int overlapY = stepY / 2;
+
+
+            // 定义所有区域：左中右 + 上中下（带重叠，绝对不会切断！）
+            Rect[] regions = new Rect[]
+            {
+               new Rect(0, 0, stepX + overlapX, h),                // 左
+               new Rect(stepX - overlapX, 0, stepX + overlapX*2, h), // 中
+               new Rect(stepX*2 - overlapX, 0, stepX + overlapX, h), // 右 
+               new Rect(0, 0, w, stepY + overlapY), // 上
+               new Rect(0, stepY - overlapY, w, stepY + overlapY * 2), // 中
+               new Rect(0, stepY * 2 - overlapY, w, stepY + overlapY)  // 下
+            };
+
+            int regionsNum = 0;
+            foreach (var rect in regions)
+            {
+                try
+                {
+                    using Mat block = new Mat(src, rect);
+                    string[] texts = qr.DetectAndDecodeRaw(block, out _);
+
+                    if (texts != null && texts.Length > 0)
+                    {
+                        int i = 0;
+                        foreach (var t in texts)
+                        {
+                            if (!string.IsNullOrEmpty(t) && !results.Contains(t))
+                            {
+                                results.Add(t);
+                                Console.WriteLine($"✅ 切块区域{regionsNum + 1},第 {i + 1} 个二维码内容：{t}");
+                            }
+                            i++;
+                        }
+                        return true; // 只要一块识别到，直接成功
+                    }
+                }
+                catch { continue; }
+
+                regionsNum++;
+            }
+            return false;
         }
 
         // 安全释放rects数组的方法

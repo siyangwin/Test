@@ -34,8 +34,8 @@ namespace Test
     {
         static async Task Main(string[] args)
         {
-            //Zxing();
-            OpenCv();
+            Zxing();
+            //OpenCv();
             //ChangeImages();
             //OCRChange();
             //OCRImage();
