@@ -5,12 +5,12 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Aspose.BarCode" Version="26.4.0" />
     <PackageReference Include="OpenCvSharp4" Version="4.13.0.20260427" />
-    <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.13.0.20260302" />
     <PackageReference Include="PuppeteerSharp" Version="24.39.0" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.116.1" />
@@ -31,6 +31,9 @@
     </Reference>
     <Reference Include="DevExpress.Pdf.v20.2.Drawing">
       <HintPath>DLL\DevExpress.Pdf.v20.2.Drawing.dll</HintPath>
+    </Reference>
+    <Reference Include="OpenCvSharpExtern">
+      <HintPath>DLL\OpenCvSharpExtern.dll</HintPath>
     </Reference>
   </ItemGroup>
 

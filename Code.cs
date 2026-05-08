@@ -364,7 +364,6 @@ namespace Test
                             try
                             {
                                 // 8. 调用微信二维码识别
-                                //opencvDecoder.DetectAndDecode(processedImage, out rects, out texts);
                                 texts = weChatQRCode.DetectAndDecodeRaw(processedImage, out rects);
                                 //texts = weChatQRCode.DetectAndDecode(processedImage, out Point2f[][] points);
                                 // 9. 处理识别结果
