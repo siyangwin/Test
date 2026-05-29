@@ -1,6 +1,8 @@
 ﻿using OpenCvSharp;
 using System.Drawing;
 using WebDriverBiDi.Bluetooth;
+using Point = OpenCvSharp.Point;
+
 
 namespace Test
 {
@@ -398,6 +400,9 @@ namespace Test
                                 // 9. 处理识别结果
                                 if (texts != null && texts.Length > 0)
                                 {
+
+                                    // 1. 克隆一张新图，专门用来画框（原图 processedImage 保持不变）
+                                    Mat drawMat = processedImage.Clone();
                                     for (int i = 0; i < texts.Length; i++)
                                     {
                                         if (!string.IsNullOrEmpty(texts[i]))
@@ -405,7 +410,67 @@ namespace Test
                                             results.Add(texts[i]);
                                             Console.WriteLine($"✅ 第 {i + 1} 个二维码内容：{texts[i]}");
                                         }
+
+
+                                        if (!string.IsNullOrEmpty(texts[i]))
+                                        {
+                                            #region 直接读取外接矩形 X、Y、宽、高
+                                            Rect box = Cv2.BoundingRect(rects[i]);
+                                            int x = box.X;
+                                            int y = box.Y;
+                                            int w = box.Width;
+                                            int h = box.Height;
+                                            #endregion
+
+
+                                            #region 用 .At<float>() 安全读（最稳，不报错）
+                                            Mat ptsMat = rects[i]; // 1行×4列×2通道（4个点，每个点x,y）
+
+                                            // 逐个取4个角点：j=0~3 行，0列=x，1列=y
+                                            float x1 = ptsMat.At<float>(0, 0);
+                                            float y1 = ptsMat.At<float>(0, 1);
+
+                                            float x2 = ptsMat.At<float>(1, 0);
+                                            float y2 = ptsMat.At<float>(1, 1);
+
+                                            float x3 = ptsMat.At<float>(2, 0);
+                                            float y3 = ptsMat.At<float>(2, 1);
+
+                                            float x4 = ptsMat.At<float>(3, 0);
+                                            float y4 = ptsMat.At<float>(3, 1);
+
+                                            Point p1 = new Point((int)Math.Round(x1), (int)Math.Round(y1));
+                                            Point p2 = new Point((int)Math.Round(x2), (int)Math.Round(y2));
+                                            Point p3 = new Point((int)Math.Round(x3), (int)Math.Round(y3));
+                                            Point p4 = new Point((int)Math.Round(x4), (int)Math.Round(y4));
+
+                                            // 画红色框  原图
+                                            //Cv2.Polylines(processedImage, new[] { new[] { p1, p2, p3, p4 } }, true, Scalar.Red, 2);
+
+                                            // 2. 在克隆图上画框，不伤原图
+                                            Cv2.Polylines(drawMat, new[] { new[] { p1, p2, p3, p4 } }, true, Scalar.Red, 2);
+                                            #endregion
+                                        }
                                     }
+
+                                    // 3. 显示/保存的是画了框的副本
+                                    //先创建窗口：允许手动缩放
+                                    Cv2.NamedWindow("二维码位置", WindowFlags.Normal);
+
+                                    //直接指定窗口大小（宽800，高600）
+                                    //Cv2.ResizeWindow("二维码位置", 800, 600);
+
+                                    // 显示画好框的图 弹出图片窗口
+                                    Cv2.ImShow("二维码位置", drawMat);
+                                    Cv2.WaitKey(0);//让弹出的图片窗口不闪退，停在屏幕上，等你按任意键才关闭。
+
+                                    // 如果你需要保存画了框的图片（不需要就删掉）
+                                    //string folder = @"D:\二维码结果";
+                                    //if (!Directory.Exists(folder))
+                                    //    Directory.CreateDirectory(folder);
+                                    //Cv2.ImWrite(@"D:\二维码结果\识别图片.jpg", drawMat);
+
+                                    drawMat.Dispose();
                                 }
                                 else
                                 {

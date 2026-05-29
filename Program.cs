@@ -1,4 +1,5 @@
 ﻿using Aspose.BarCode.BarCodeRecognition;
+using ClosedXML.Excel;
 using DevExpress.Office.DigitalSignatures;
 using DevExpress.Pdf;
 using OpenCvSharp;
@@ -13,6 +14,7 @@ using SixLabors.ImageSharp.Processing;
 using SkiaSharp;
 using SMBLibrary;
 using SMBLibrary.Client;
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Net;
 using System.Net.Http.Json;
@@ -40,6 +42,8 @@ namespace Test
             //OCRChange();
             //OCRImage();
             //DownLoad();
+            //DownLoadByFileByApi();
+
             //string folderPath = @"C:\Users\liusi\Desktop\Form\check";
             //TestSignatureDetection(folderPath);
 
@@ -74,6 +78,14 @@ namespace Test
             //await feishu();
 
 
+            // 调用方法，传入TXT文件路径
+            //ReadTxtAndConvertToDecimal(@"E:\xxx.txt");
+            //checkMath();
+
+            //LoadingImg();
+
+
+            //LoadExcel();
             Console.WriteLine();
             Console.ReadKey();
 
@@ -786,7 +798,8 @@ namespace Test
         public static void Zxing()
         {
             DateTime Pstarttime = DateTime.Now;
-            string folderPath = @"C:\Users\liusi\Desktop\Zxing";
+            //string folderPath = @"C:\Users\liusi\Desktop\Zxing";
+            string folderPath = @"C:\Users\liusi\Desktop\11";
             string SaveImageFile = @"C:\Users\liusi\Desktop\ZxingDemo";
             // 检查文件夹是否存在
             if (!Directory.Exists(folderPath))
@@ -2358,7 +2371,7 @@ namespace Test
         }
         #endregion
 
-        #region
+        #region OpenCVBarcode识别
 
         // 指定你的模型文件路径（确保在 Linux 服务器上这些文件也存在）
         static string detect_prototxt = Path.Combine("data", "wechat_qrcode", "detect.prototxt");
@@ -2368,7 +2381,9 @@ namespace Test
         public static void OpenCv()
         {
             DateTime Pstarttime = DateTime.Now;
-            string folderPath = @"C:\Users\liusi\Desktop\Zxing";
+            string folderPath = @"C:\Users\liusi\Desktop\11";
+
+            //string folderPath = @"C:\Users\liusi\Desktop\PRD-Report\downloads";
             string SaveImageFile = @"C:\Users\liusi\Desktop\ZxingDemo";
             // 检查文件夹是否存在
             if (!Directory.Exists(folderPath))
@@ -5001,16 +5016,229 @@ namespace Test
             string extension = Path.GetExtension(fileName);
 
             // 如果文件已存在，添加数字后缀（如：test.jpg → test(1).jpg）
-            int counter = 1;
-            while (File.Exists(filePath))
-            {
-                filePath = Path.Combine(directory, $"{fileNameWithoutExt}({counter}){extension}");
-                counter++; // 单独一行执行自增操作
-            }
+            //int counter = 1;
+            //while (File.Exists(filePath))
+            //{
+            //    filePath = Path.Combine(directory, $"{fileNameWithoutExt}({counter}){extension}");
+            //    counter++; // 单独一行执行自增操作
+            //}
 
             return filePath;
         }
 
+
+        //通过读取本地文件Url跳转浏览器下载
+        public static async Task DownLoadByFileByChrome()
+        {
+            int DoenbLoadNum = 20;
+            string filePath = @"C:\Users\liusi\Desktop\PRD-Report\image.txt";
+            int counter = 0;
+
+
+            // 逐行读取文件
+            foreach (var line in File.ReadLines(filePath))
+            {
+                counter++;
+                if (counter== DoenbLoadNum+1)
+                {
+                    return;
+                }
+              
+                // 去除首尾空白字符
+                var id = line.Trim();
+                // 跳过空行
+                if (string.IsNullOrWhiteSpace(id)) continue;
+
+                string url = $"https://103.155.102.93/Download?id={id}";
+
+                // 打开HTML文件
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                });
+
+            }
+            Console.WriteLine("🎉 全部下载任务处理完毕！");
+        }
+
+
+        //通过读取本地文件Url下载
+        public static async Task DownLoadByFileByApi()
+        {
+            int downloadLimit = 200;
+            //string filePath = @"C:\Users\liusi\Desktop\PRD-Report\DownLoadImage\CUHKMC-REPRT-038\CUHKMC-REPRT-038.txt";
+            //string saveFolder = @"C:\Users\liusi\Desktop\PRD-Report\DownLoadImage\CUHKMC-REPRT-038";
+
+            string filePath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\Image\image.txt";
+            string saveFolder = @"C:\Users\liusi\Desktop\PRD-Report\NEW\Image";
+
+            // 确保保存目录存在
+            Directory.CreateDirectory(saveFolder);
+            // 重点：限制同时下载数量（关键！防止连接爆炸）
+            int maxParallelDownloads = 6;
+            var semaphore = new SemaphoreSlim(maxParallelDownloads);
+            // 创建带证书忽略的HttpClient
+            HttpClientHandler handler = new HttpClientHandler();
+            handler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
+            using HttpClient safeClient = new HttpClient(handler);
+            // 添加 apikey Header
+            safeClient.DefaultRequestHeaders.Add("apikey", "20f0f338aaf82309c53d4c069fa6248e3b203a66311be1f7a8c7b951aa298622");
+            int counter = 0;
+            var tasks = new List<Task>();
+            // 逐行读取文件
+            foreach (var line in File.ReadLines(filePath))
+            {
+                counter++;
+                if (counter > downloadLimit)
+                {
+                    break;
+                }
+
+                // 去除首尾空白字符
+                var id = line.Trim();
+                // 跳过空行
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    counter--;
+                    continue;
+                }
+                string url = $"https://103.155.102.93/Download?id={id}";
+
+
+                // 优化：先检查本地是否存在包含该ID的文件，避免不必要的API请求
+                //string[] existingFiles = Directory.GetFiles(saveFolder, $"*{id}*", SearchOption.TopDirectoryOnly);
+                string[] existingFiles = Directory.GetFiles(saveFolder, $"[{id}]*", SearchOption.TopDirectoryOnly);
+                if (existingFiles.Length > 0)
+                {
+                    Console.WriteLine($"[{counter}] ⏭️ 本地已存在包含ID [{id}] 的文件：{existingFiles[0]}");
+                    counter--;
+                    continue;
+                }
+
+
+                // 获取文件名
+                string realFileName = $"{id}.unknown";
+                try
+                {
+                    using var headResp = await safeClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+                    //using var headResp = await safeClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, url));
+                    if (headResp.IsSuccessStatusCode)
+                    {
+                        realFileName = $"[{id}]"+GetFileNameFromHeader(headResp) ?? realFileName;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"{id}异常，跳过");
+
+                        // 将失败的ID写入日志文件，便于下次重试
+                        string failedLogPath = $@"{saveFolder}\GetNamefailed_downloads.txt";
+                        File.AppendAllText(failedLogPath, $"{id}\n");
+                        Console.WriteLine($"[{counter}] 📝 获取用户名错误,已记录失败ID到 {failedLogPath}");
+                        continue;
+                    }
+                }
+                catch { }
+
+                string savePath = GetUniqueFilePath(saveFolder, realFileName);
+                //Console.WriteLine($"[{counter}] 文件名：{realFileName}  URL:{url}");
+
+                // 核心：检测文件已存在 → 直接跳过
+                if (File.Exists(savePath))
+                {
+                    Console.WriteLine($"[{counter}] ⏭️ 已存在，跳过：{realFileName}");
+                    counter--;
+                    continue;
+                }
+
+                // 排队，控制并发
+                await semaphore.WaitAsync();
+                // 捕获当前循环变量，避免闭包问题
+                int currentCounter = counter;
+                string currentId = id;
+                string currentUrl = url;
+                string currentSavePath = savePath;
+                string currentFileName = realFileName;
+                tasks.Add(Task.Run(async () =>
+                {
+                    try
+                    {
+                        #region 可用有效下载代码
+                        //Console.WriteLine($"[{currentCounter}] 📥 下载中：{currentFileName}");
+                        //using var stream = await safeClient.GetStreamAsync(currentUrl);
+                        //using var fs = new FileStream(currentSavePath, FileMode.Create, FileAccess.Write);
+                        //await stream.CopyToAsync(fs);
+                        //Console.WriteLine($"[{currentCounter}] ✅ 下载完成：{currentFileName}");
+                        #endregion
+
+                        #region 可用有效下载代码++添加文件完整性检测
+                        Console.WriteLine($"[{currentCounter}] 📥 下载中：{currentFileName}");
+
+                        // 使用 GetAsync 获取响应，先检查状态码
+                        using var response = await safeClient.GetAsync(currentUrl, HttpCompletionOption.ResponseHeadersRead);
+                        response.EnsureSuccessStatusCode();
+
+                        // 获取期望文件大小
+                        long? expectedSize = response.Content.Headers.ContentLength;
+
+                        // 开始下载
+                        using var stream = await response.Content.ReadAsStreamAsync();
+                        using var fs = new FileStream(currentSavePath, FileMode.Create, FileAccess.Write);
+                        await stream.CopyToAsync(fs);
+
+                        // 验证文件完整性，不完整直接抛出错误
+                        long actualSize = fs.Length;
+                        if (expectedSize.HasValue && actualSize != expectedSize.Value)
+                        {
+                            throw new IOException($"文件下载不完整：期望 {expectedSize.Value} 字节，实际 {actualSize} 字节");
+                        }
+
+                        Console.WriteLine($"[{currentCounter}] ✅ 下载完成：{currentFileName} ({actualSize} 字节)");
+                        #endregion
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[{currentCounter}] ❌ 下载失败 {currentFileName}：{ex.Message}");
+                        if (File.Exists(currentSavePath))
+                        {
+                            File.Delete(currentSavePath);
+                        }
+
+                        // 将失败的ID写入日志文件，便于下次重试
+                        string failedLogPath = $@"{saveFolder}\failed_downloads.txt";
+                        File.AppendAllText(failedLogPath, $"{currentId}\n");
+                        Console.WriteLine($"[{currentCounter}] 📝 已记录失败ID到 {failedLogPath}");
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                }));
+            }
+            // 等待所有下载完成
+            await Task.WhenAll(tasks);
+            Console.WriteLine("🎉 全部下载任务处理完毕！");
+        }
+
+        /// <summary>
+        /// 从Content-Disposition头解析真实文件名
+        /// </summary>
+        private static string GetFileNameFromHeader(HttpResponseMessage response)
+        {
+            if (!response.Content.Headers.TryGetValues("Content-Disposition", out var values))
+                return null;
+
+            foreach (var val in values)
+            {
+                // 匹配格式：attachment; filename="xxx.jpg"
+                var match = System.Text.RegularExpressions.Regex.Match(val, @"filename\s*=\s*""?([^"";]+)""?");
+                if (match.Success)
+                {
+                    return match.Groups[1].Value.Trim();
+                }
+            }
+            return null;
+        }
 
         #endregion
 
@@ -6380,6 +6608,437 @@ namespace Test
             }
 
             Console.WriteLine("Over");
+        }
+        #endregion
+
+        #region 读取文本文件测试数据类型
+        
+        /// <summary>
+        /// 读取TXT文件并逐行转换为小数
+        /// </summary>
+        /// <param name="filePath">TXT文件路径</param>
+        public static void ReadTxtAndConvertToDecimal(string filePath)
+        {
+            try
+            {
+                // decimal(10,5) 的范围：-99999.99999 到 99999.99999
+                decimal minValue = -99999.99999m;
+                decimal maxValue = 99999.99999m;
+
+                // 逐行读取文件
+                foreach (var line in File.ReadLines(filePath))
+                {
+                    // 去除首尾空白字符
+                    var trimmedLine = line.Trim();
+
+                    // 跳过空行
+                    if (string.IsNullOrWhiteSpace(trimmedLine))
+                        continue;
+
+                    // 尝试转换为小数
+                    if (decimal.TryParse(trimmedLine, out decimal result))
+                    {
+                        //Console.WriteLine($"转换成功: {result}");
+                        // 验证是否在 decimal(10,5) 范围内
+                        if (result >= minValue && result <= maxValue)
+                        {
+                            // 验证小数位数不超过5位
+                            string[] parts = trimmedLine.Split('.');
+                            if (parts.Length == 2 && parts[1].Length > 5)
+                            {
+                                Console.WriteLine($"错误：小数位数超过5位，无法转为 decimal(10,5): {trimmedLine}");
+                            }
+                            else
+                            {
+                                Console.WriteLine($"转换成功: {result}");
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine($"错误：超出 decimal(10,5) 范围 [-99999.99999, 99999.99999]: {trimmedLine}");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"转换失败，无效的小数格式: {trimmedLine}");
+                        Console.WriteLine($"错误：无效的小数格式: {trimmedLine}");
+                    }
+                }
+            }
+            catch (FileNotFoundException)
+            {
+                Console.WriteLine($"错误：文件未找到 - {filePath}");
+            }
+            catch (IOException ex)
+            {
+                Console.WriteLine($"文件读取错误: {ex.Message}");
+            }
+        }
+        #endregion
+
+        #region 测试Math
+        public static void checkMath()
+        {
+            decimal obstetricFeeRangeStart = 40000;
+            decimal ComplexityStart = 0;
+            decimal obstetricFeeRangeEnd = 48000;
+            decimal ComplexityEnd = 0;
+            string AnaesthesiologistEpiduralAnalgesia = $"$ {Math.Round((obstetricFeeRangeStart + ComplexityStart) / 3m / 1000m) * 1000m}  - $ {Math.Round((obstetricFeeRangeEnd + ComplexityEnd) / 3m / 1000m) * 1000m}";
+            Console.WriteLine(AnaesthesiologistEpiduralAnalgesia);
+        }
+        #endregion
+
+        #region 内存爆炸测试
+        public static void LoadingImg()
+        {
+            //string folderPath = @"C:\Users\liusi\Desktop\Zxing";
+            string folderPath = @"C:\Users\liusi\Desktop\PRD-Report\downloads";
+            List<Stream> imageStreams = new List<Stream>();
+
+            // 检查文件夹是否存在
+            if (!Directory.Exists(folderPath))
+            {
+                Console.WriteLine($"文件夹不存在：{folderPath}");
+                return;
+            }
+
+            // 获取文件夹中所有支持的图片格式
+            string[] imageExtensions = { "*.jpg", "*.jpeg", "*.png", "*.bmp", "*.gif", "*.tiff", "*.tif" };
+            //List<string> imageFiles = new List<string>();
+
+            foreach (string extension in imageExtensions)
+            {
+                try
+                {
+                    string[] files = Directory.GetFiles(folderPath, extension, SearchOption.AllDirectories);
+                    //imageFiles.AddRange(files);
+
+                    foreach (string filePath in files)
+                    {
+                        // 方法1：推荐！只读方式打开，性能最好、最安全
+                        Stream stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+
+                        // 方法2：也可以用 File.OpenRead（更简洁）
+                        // Stream stream = File.OpenRead(filePath);
+
+                        imageStreams.Add(stream);
+
+
+                        //using (var pdfStream = SimpleTestPdf(filePath))
+                        //{
+                        //    Console.WriteLine($"UploadPDF-PDF Stream Length: {pdfStream.Length}, Position: {pdfStream.Position}");
+
+                        //    UploadFile(pdfStream);
+                        //}
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"搜索 {extension} 文件时出错：{ex.Message}");
+                }
+            }
+
+            if (imageStreams.Count == 0)
+            {
+                Console.WriteLine($"文件夹中没有找到图片文件：{folderPath}");
+                return;
+            }
+
+            using (var pdfStream = MergeImagesToPdfStream3(imageStreams))
+            {
+                Console.WriteLine($"UploadPDF-PDF Stream Length: {pdfStream.Length}, Position: {pdfStream.Position}");
+
+
+                //UploadFile(pdfStream);
+            }
+
+            //using (var pdfStream = SimpleTestPdf())
+            //{
+            //    Console.WriteLine($"UploadPDF-PDF Stream Length: {pdfStream.Length}, Position: {pdfStream.Position}");
+
+
+            //    UploadFile(pdfStream);
+            //}
+        }
+
+        public static void UploadFile(Stream fileStream, bool canOverride = true)
+        {
+            // 验证流是否可读取
+            if (!fileStream.CanRead)
+            {
+                Console.WriteLine("UploadFile: Stream must be readable");
+                throw new ArgumentException("Stream must be readable", nameof(fileStream));
+            }
+
+            // 创建流副本（安全、不影响外部流）
+            using (var copyStream = new MemoryStream())
+            {
+                // 重置原始流位置
+                if (fileStream.CanSeek)
+                {
+                    fileStream.Position = 0;
+                }
+
+                // 复制到副本
+                fileStream.CopyTo(copyStream);
+                // 副本重置位置
+                copyStream.Position = 0;
+
+                string timeStamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
+                string saveFilePath = $@"C:\Users\liusi\Desktop\test\debug_{timeStamp}.pdf";
+
+                using (var fileStreamWrite = new FileStream(saveFilePath, FileMode.Create, FileAccess.Write))
+                {
+                    copyStream.CopyTo(fileStreamWrite); // ✅ 这里必须用 copyStream
+                }
+
+                Console.WriteLine($"✅ PDF 保存成功：{saveFilePath}");
+                Console.WriteLine($"UploadFile: 流大小: {copyStream.Length}, 位置: {copyStream.Position}");
+            }
+        }
+
+        public static MemoryStream MergeImagesToPdfStream3(List<Stream> imageStreams)
+        {
+            int MROMergePDFChunkSize = 4;
+            int MROMergePDFProcessorCount = 3;
+            var swTotal = Stopwatch.StartNew();
+            var finalStream = new MemoryStream();
+
+            try
+            {
+                // 预先读取所有图片数据到内存，避免在并行处理中重复读取
+                var imageDataList = new (byte[] Data, int OriginalIndex)[imageStreams.Count];
+
+                for (int i = 0; i < imageStreams.Count; i++)
+                {
+                    var stream = imageStreams[i];
+                    if (stream.CanSeek)
+                        stream.Position = 0;
+
+                    var bytes = new byte[stream.Length];
+                    stream.Read(bytes, 0, bytes.Length);
+                    imageDataList[i] = (bytes, i);
+                }
+
+                // 分块处理
+                var chunkSize = Math.Max(1, MROMergePDFChunkSize);
+                var batches = new List<(List<(byte[] Data, int OriginalIndex)> Batch, int BatchIndex)>();
+
+                for (int i = 0; i < imageDataList.Length; i += chunkSize)
+                {
+                    var batch = imageDataList.Skip(i).Take(chunkSize).ToList();
+                    batches.Add((batch, i / chunkSize));
+                }
+
+                // 并发处理各批次，生成临时PDF文档
+                var tempDocs = new MemoryStream[batches.Count];
+                var maxDegree = Math.Max(1, MROMergePDFProcessorCount);
+                Parallel.ForEach(batches, new ParallelOptions { MaxDegreeOfParallelism = maxDegree }, batchData =>
+                {
+                    var (batch, index) = batchData;
+                    var swChunk = Stopwatch.StartNew();
+
+                    var chunkDoc = new Aspose.Pdf.Document();
+
+                    foreach (var (imageData, originalIndex) in batch)
+                    {
+                        float width, height;
+                        using (var skiaStream = new MemoryStream(imageData))
+                        using (var imageInfo = SkiaSharp.SKImage.FromEncodedData(skiaStream))
+                        {
+                            width = imageInfo.Width;
+                            height = imageInfo.Height;
+                        }
+
+                        var page = chunkDoc.Pages.Add();
+                        page.PageInfo.Width = width;
+                        page.PageInfo.Height = height;
+                        page.PageInfo.Margin = new Aspose.Pdf.MarginInfo(0, 0, 0, 0);
+
+                        var pdfImage = new Aspose.Pdf.Image
+                        {
+                            ImageStream = new MemoryStream(imageData, 0, imageData.Length, false, true),
+                            FixWidth = width,
+                            FixHeight = height,
+                            Margin = new Aspose.Pdf.MarginInfo(0, 0, 0, 0)
+                        };
+
+                        page.Paragraphs.Add(pdfImage);
+                    }
+
+                    // 保存分块为临时内存流
+                    var tempStream = new MemoryStream();
+                    //chunkDoc.Save(tempStream);
+                    tempStream.Position = 0;
+
+                    // 存储到对应位置
+                    tempDocs[index] = tempStream;
+
+                    swChunk.Stop();
+                    Console.WriteLine($"UploadPDF-MergeImagesToPdfStream: Processing of chunk {index + 1} completed. Time taken: {swChunk.ElapsedMilliseconds} ms. Number of pages: {batch.Count}. MaxDegreeOfParallelism: {maxDegree}");
+                });
+
+                // 创建最终文档
+                using var finalDoc = new Aspose.Pdf.Document();
+
+                // 按顺序从每个临时文档复制页面
+                for (int i = 0; i < tempDocs.Length; i++)
+                {
+                    if (tempDocs[i] != null && tempDocs[i].Length > 0)
+                    {
+                        tempDocs[i].Position = 0;
+                        var tempDoc = new Aspose.Pdf.Document(tempDocs[i]);
+                        // 批量复制页面
+                        if (tempDoc.Pages.Count > 0)
+                        {
+                            finalDoc.Pages.Add(tempDoc.Pages);
+                        }
+                    }
+                    break;
+                }
+
+                // 保存到最终流
+                finalDoc.Save(finalStream);
+                finalStream.Position = 0;
+
+                // 释放临时流
+                foreach (var tempDoc in tempDocs)
+                {
+                    tempDoc?.Dispose();
+                }
+
+                swTotal.Stop();
+                Console.WriteLine($"UploadPDF-MergeImagesToPdfStream: Output stream length: {finalStream.Length}, swTotal: {swTotal.ElapsedMilliseconds}ms");
+
+                return finalStream;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"UploadPDF-MergeImagesToPdfStream：{ex.Message}", ex);
+                finalStream?.Dispose();
+                throw new Exception("System:Failed to merge images to PDF: " + ex.Message, ex);
+            }
+        }
+
+
+        public static MemoryStream SimpleTestPdf(string testImagePath)
+        {
+            // 测试用的单张图片（用你文件夹里的一张）
+            //string testImagePath = @"C:\Users\liusi\Desktop\Zxing\[399762]Batch_202605071029127_399561.png"; // 改成你自己的图片路径
+
+            var finalStream = new MemoryStream();
+            try
+            {
+                using (var doc = new Aspose.Pdf.Document())
+                {
+                    // 添加一张图片
+                    using (var fs = File.OpenRead(testImagePath))
+                    {
+                        // 读取图片尺寸
+                        using var skiaStream = new MemoryStream();
+                        fs.CopyTo(skiaStream);
+                        skiaStream.Position = 0;
+                        using var imageInfo = SkiaSharp.SKImage.FromEncodedData(skiaStream);
+                        float width = imageInfo.Width;
+                        float height = imageInfo.Height;
+
+                        // 添加页面
+                        var page = doc.Pages.Add();
+                        page.PageInfo.Width = width;
+                        page.PageInfo.Height = height;
+                        page.PageInfo.Margin = new Aspose.Pdf.MarginInfo(0, 0, 0, 0);
+
+                        // 添加图片
+                        fs.Position = 0;
+                        var pdfImage = new Aspose.Pdf.Image
+                        {
+                            ImageStream = fs,
+                            FixWidth = width,
+                            FixHeight = height,
+                            Margin = new Aspose.Pdf.MarginInfo(0, 0, 0, 0)
+                        };
+                        page.Paragraphs.Add(pdfImage);
+
+                        // 保存到流
+                        doc.Save(finalStream);
+                    }
+
+                    finalStream.Position = 0;
+                }
+                return finalStream;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"生成PDF失败：{ex.Message}");
+                finalStream?.Dispose();
+                throw;
+            }
+        }
+        #endregion
+
+        #region 读取Excel 补充超链接
+        public static void LoadExcel()
+        {
+
+            var filePath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\20260428-20260528.xlsx";
+            var imageFolder = @"C:\Users\liusi\Desktop\PRD-Report\NEW\Image";
+
+
+            // 打开文件
+            using var wb = new XLWorkbook(filePath); // XLWorkbook 就是它
+            var ws = wb.Worksheet("Sheet1");
+
+            int rowCount = ws.RowsUsed().Count();
+
+            for (int row = 2; row <= rowCount; row++)  // 第2行开始（跳过表头）
+            {
+                // 读取 A 列编号 ✅
+                string TreeObjectId = ws.Cell(row, 10).GetString().Trim();
+
+                if (string.IsNullOrEmpty(TreeObjectId)) continue;
+
+                // 找 [id] 开头的图片
+                string findName = $"[{TreeObjectId}]";
+                string found = FindImage(imageFolder, findName);
+
+
+              
+                if (!string.IsNullOrWhiteSpace(found))
+                {
+                    Console.WriteLine("No." + row + ":存在文件，补充数据。");
+                    //写入文件名
+                    ws.Cell(row, 12).Value = found;
+
+                    //写入超链接（动态 L 列）
+                    // 🔥 正确公式：=HYPERLINK("Image\"&L2&"",L2)  自动变 L2、L3、L4...
+                    ws.Cell(row, 13).FormulaA1 = $"=HYPERLINK(\"Image\\\"&L{row}&\"\", L{row})";
+                }
+                else
+                {
+                    Console.WriteLine("No." + row + ":不存在文件,跳过。");
+                }
+
+                //if (row>=260)
+                //{
+                //    break;
+                //}
+            }
+
+            string targetPath = Path.Combine(Path.GetDirectoryName(filePath),  // 取原文件所在目录
+               Path.GetFileNameWithoutExtension(filePath) + "_"+DateTime.Now.ToString("yyyyMMddHHmmssfffffff")+".xlsx"  // 原名_结果
+             );
+
+            wb.SaveAs(targetPath);
+            Console.WriteLine("完成！");
+        }
+
+        static string FindImage(string folder, string startWith)
+        {
+            if (!Directory.Exists(folder))
+                return null;
+
+            var files = Directory.GetFiles(folder, $"{startWith}*", SearchOption.TopDirectoryOnly);
+            return files.Length > 0 ? Path.GetFileName(files[0]) : null;
         }
         #endregion
     }
