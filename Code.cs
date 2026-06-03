@@ -1,6 +1,8 @@
 ﻿using OpenCvSharp;
 using System.Drawing;
 using WebDriverBiDi.Bluetooth;
+using ZXing;
+using static Test.Program;
 using Point = OpenCvSharp.Point;
 
 
@@ -300,9 +302,9 @@ namespace Test
             }
         }
 
-        public List<string> DecodeByOpenCV(string imagePath)
+        public List<DetectedObject> DecodeByOpenCV(string imagePath)
         {
-            var results = new List<string>();
+            var results = new List<DetectedObject>();
 
             // 1. 检查图片文件是否存在
             if (!File.Exists(imagePath))
@@ -361,10 +363,7 @@ namespace Test
                             {
                                 // 第4次：切块识别，直接救回最后那张！
                                 bool success = SplitAndDetect(image, weChatQRCode, results);
-                                if (success)
-                                {
-                                    break; // 识别到了，直接退出
-                                }
+                                break;
                             }
 
 
@@ -405,9 +404,11 @@ namespace Test
                                     Mat drawMat = processedImage.Clone();
                                     for (int i = 0; i < texts.Length; i++)
                                     {
+                                        DetectedObject detectedObject = new DetectedObject();
+                                        detectedObject.Type = "QR_CODE";
                                         if (!string.IsNullOrEmpty(texts[i]))
                                         {
-                                            results.Add(texts[i]);
+                                            detectedObject.Content = texts[i];
                                             Console.WriteLine($"✅ 第 {i + 1} 个二维码内容：{texts[i]}");
                                         }
 
@@ -449,20 +450,32 @@ namespace Test
 
                                             // 2. 在克隆图上画框，不伤原图
                                             Cv2.Polylines(drawMat, new[] { new[] { p1, p2, p3, p4 } }, true, Scalar.Red, 2);
+
+                                            // 初始化 ResultPoint 数组（长度 4）
+                                            ResultPoint[] resultPoints = new ResultPoint[4];
+
+                                            // 把坐标写进去
+                                            resultPoints[0] = new ResultPoint(p1.X, p1.Y);
+                                            resultPoints[1] = new ResultPoint(p2.X, p2.Y);
+                                            resultPoints[2] = new ResultPoint(p3.X, p3.Y);
+                                            resultPoints[3] = new ResultPoint(p4.X, p4.Y);
+
+                                            detectedObject.resultPoints = resultPoints;
                                             #endregion
                                         }
+                                        results.Add(detectedObject);
                                     }
 
                                     // 3. 显示/保存的是画了框的副本
                                     //先创建窗口：允许手动缩放
-                                    Cv2.NamedWindow("二维码位置", WindowFlags.Normal);
+                                    //Cv2.NamedWindow("二维码位置", WindowFlags.Normal);
 
                                     //直接指定窗口大小（宽800，高600）
                                     //Cv2.ResizeWindow("二维码位置", 800, 600);
 
                                     // 显示画好框的图 弹出图片窗口
-                                    Cv2.ImShow("二维码位置", drawMat);
-                                    Cv2.WaitKey(0);//让弹出的图片窗口不闪退，停在屏幕上，等你按任意键才关闭。
+                                    //Cv2.ImShow("二维码位置", drawMat);
+                                    //Cv2.WaitKey(0);//让弹出的图片窗口不闪退，停在屏幕上，等你按任意键才关闭。
 
                                     // 如果你需要保存画了框的图片（不需要就删掉）
                                     //string folder = @"D:\二维码结果";
@@ -532,7 +545,7 @@ namespace Test
         }
 
         // 水平三等分（左、中、右），只要任意一块识别到就成功
-        private bool SplitAndDetect(Mat src, WeChatQRCode qr, List<string> results)
+        private bool SplitAndDetect(Mat src, WeChatQRCode qr, List<DetectedObject> results)
         {
             int w = src.Width;
             int h = src.Height;
@@ -564,19 +577,61 @@ namespace Test
                 try
                 {
                     using Mat block = new Mat(src, rect);
-                    string[] texts = qr.DetectAndDecodeRaw(block, out _);
+                    Mat[] rects = null;
+                    string[] texts = qr.DetectAndDecodeRaw(block, out rects);
 
                     if (texts != null && texts.Length > 0)
                     {
                         int i = 0;
                         foreach (var t in texts)
                         {
-                            if (!string.IsNullOrEmpty(t) && !results.Contains(t))
+                            DetectedObject detectedObject = new DetectedObject();
+                            detectedObject.Type = "QR_CODE";
+                            if (!string.IsNullOrEmpty(t) && !results.Any(s=>s.Content.Contains(t)))
                             {
-                                results.Add(t);
+                                detectedObject.Content = t;
                                 Console.WriteLine($"✅ 切块区域{regionsNum + 1},第 {i + 1} 个二维码内容：{t}");
+
+
+
+                                #region 用 .At<float>() 安全读（最稳，不报错）
+                                Mat ptsMat = rects[i]; // 1行×4列×2通道（4个点，每个点x,y）
+
+                                // 逐个取4个角点：j=0~3 行，0列=x，1列=y
+                                float x1 = ptsMat.At<float>(0, 0);
+                                float y1 = ptsMat.At<float>(0, 1);
+
+                                float x2 = ptsMat.At<float>(1, 0);
+                                float y2 = ptsMat.At<float>(1, 1);
+
+                                float x3 = ptsMat.At<float>(2, 0);
+                                float y3 = ptsMat.At<float>(2, 1);
+
+                                float x4 = ptsMat.At<float>(3, 0);
+                                float y4 = ptsMat.At<float>(3, 1);
+
+                                OpenCvSharp.Point p1 = new OpenCvSharp.Point((int)Math.Round(x1), (int)Math.Round(y1));
+                                OpenCvSharp.Point p2 = new OpenCvSharp.Point((int)Math.Round(x2), (int)Math.Round(y2));
+                                OpenCvSharp.Point p3 = new OpenCvSharp.Point((int)Math.Round(x3), (int)Math.Round(y3));
+                                OpenCvSharp.Point p4 = new OpenCvSharp.Point((int)Math.Round(x4), (int)Math.Round(y4));
+
+
+                                // 初始化 ResultPoint 数组（长度 4）
+                                ResultPoint[] resultPoints = new ResultPoint[4];
+
+                                // 把坐标写进去
+                                resultPoints[0] = new ResultPoint(p1.X, p1.Y);
+                                resultPoints[1] = new ResultPoint(p2.X, p2.Y);
+                                resultPoints[2] = new ResultPoint(p3.X, p3.Y);
+                                resultPoints[3] = new ResultPoint(p4.X, p4.Y);
+
+                                detectedObject.resultPoints = resultPoints;
+                                #endregion
+
                             }
                             i++;
+
+                            results.Add(detectedObject);
                         }
                         return true; // 只要一块识别到，直接成功
                     }

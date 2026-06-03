@@ -20,7 +20,7 @@ namespace Test
         static string sr_caffemodel = Path.Combine(basePath, "sr.caffemodel");
         private static WeChatQRCode weChatQRCode;
 
-        public static List<DetectedObject> DetectBarcodesByOpenCv(Stream imageStream)
+        private static List<DetectedObject> DetectBarcodesByOpenCv(Stream imageStream)
         {
             if (weChatQRCode == null)
             {
@@ -202,77 +202,74 @@ namespace Test
                 {
 
                     // 1. 克隆一张新图，专门用来画框（原图 processedImage 保持不变）
-                    Mat drawMat = processedImage.Clone();
-                    for (int i = 0; i < texts.Length; i++)
-                    {
-                        DetectedObject detectedObject = new DetectedObject();
-                        detectedObject.Type = "QR_CODE";
-                        if (!string.IsNullOrEmpty(texts[i]))
+                    // Mat drawMat = processedImage.Clone();
+                    //using (Mat drawMat = processedImage.Clone())
+                    //{
+                        for (int i = 0; i < texts.Length; i++)
                         {
-                            detectedObject.Content = texts[i];
-                            Console.WriteLine($"✅ 第 {i + 1} 个二维码内容：{texts[i]}");
+                            DetectedObject detectedObject = new DetectedObject();
+                            detectedObject.Type = "QR_CODE";
+                            if (!string.IsNullOrEmpty(texts[i]))
+                            {
+                                detectedObject.Content = texts[i];
+                                //Console.WriteLine($"✅ 第 {i + 1} 个二维码内容：{texts[i]}");
 
-                            #region 直接读取外接矩形 X、Y、宽、高
-                            Rect box = Cv2.BoundingRect(rects[i]);
-                            int x = box.X;
-                            int y = box.Y;
-                            int w = box.Width;
-                            int h = box.Height;
-                            #endregion
-
-
-                            #region 用 .At<float>() 安全读（最稳，不报错）
-                            Mat ptsMat = rects[i]; // 1行×4列×2通道（4个点，每个点x,y）
-
-                            // 逐个取4个角点：j=0~3 行，0列=x，1列=y
-                            float x1 = ptsMat.At<float>(0, 0);
-                            float y1 = ptsMat.At<float>(0, 1);
-
-                            float x2 = ptsMat.At<float>(1, 0);
-                            float y2 = ptsMat.At<float>(1, 1);
-
-                            float x3 = ptsMat.At<float>(2, 0);
-                            float y3 = ptsMat.At<float>(2, 1);
-
-                            float x4 = ptsMat.At<float>(3, 0);
-                            float y4 = ptsMat.At<float>(3, 1);
-
-                            OpenCvSharp.Point p1 = new OpenCvSharp.Point((int)Math.Round(x1), (int)Math.Round(y1));
-                            OpenCvSharp.Point p2 = new OpenCvSharp.Point((int)Math.Round(x2), (int)Math.Round(y2));
-                            OpenCvSharp.Point p3 = new OpenCvSharp.Point((int)Math.Round(x3), (int)Math.Round(y3));
-                            OpenCvSharp.Point p4 = new OpenCvSharp.Point((int)Math.Round(x4), (int)Math.Round(y4));
+                                #region 直接读取外接矩形 X、Y、宽、高
+                                //Rect box = Cv2.BoundingRect(rects[i]);
+                                //int x = box.X;
+                                //int y = box.Y;
+                                //int w = box.Width;
+                                //int h = box.Height;
+                                #endregion
 
 
-                            // 初始化 ResultPoint 数组（长度 4）
-                            ResultPoint[] resultPoints = new ResultPoint[4];
+                                #region 用 .At<float>() 安全读（最稳，不报错）
+                                Mat ptsMat = rects[i]; // 1行×4列×2通道（4个点，每个点x,y）
 
-                            // 把坐标写进去
-                            resultPoints[0] = new ResultPoint(p1.X, p1.Y);
-                            resultPoints[1] = new ResultPoint(p2.X, p2.Y);
-                            resultPoints[2] = new ResultPoint(p3.X, p3.Y);
-                            resultPoints[3] = new ResultPoint(p4.X, p4.Y);
+                                // 逐个取4个角点：j=0~3 行，0列=x，1列=y
+                                float x1 = ptsMat.At<float>(0, 0);
+                                float y1 = ptsMat.At<float>(0, 1);
 
-                            detectedObject.resultPoints = resultPoints;
+                                float x2 = ptsMat.At<float>(1, 0);
+                                float y2 = ptsMat.At<float>(1, 1);
 
-                            // 画红色框  原图
-                            //Cv2.Polylines(processedImage, new[] { new[] { p1, p2, p3, p4 } }, true, Scalar.Red, 2);
+                                float x3 = ptsMat.At<float>(2, 0);
+                                float y3 = ptsMat.At<float>(2, 1);
 
-                            //在克隆图上画框，不伤原图
-                            Cv2.Polylines(drawMat, new[] { new[] { p1, p2, p3, p4 } }, true, Scalar.Red, 2);
-                            #endregion
+                                float x4 = ptsMat.At<float>(3, 0);
+                                float y4 = ptsMat.At<float>(3, 1);
+
+                                OpenCvSharp.Point p1 = new OpenCvSharp.Point((int)Math.Round(x1), (int)Math.Round(y1));
+                                OpenCvSharp.Point p2 = new OpenCvSharp.Point((int)Math.Round(x2), (int)Math.Round(y2));
+                                OpenCvSharp.Point p3 = new OpenCvSharp.Point((int)Math.Round(x3), (int)Math.Round(y3));
+                                OpenCvSharp.Point p4 = new OpenCvSharp.Point((int)Math.Round(x4), (int)Math.Round(y4));
+
+
+                                // 初始化 ResultPoint 数组（长度 4）
+                                ResultPoint[] resultPoints = new ResultPoint[4];
+
+                                // 把坐标写进去
+                                resultPoints[0] = new ResultPoint(p1.X, p1.Y);
+                                resultPoints[1] = new ResultPoint(p2.X, p2.Y);
+                                resultPoints[2] = new ResultPoint(p3.X, p3.Y);
+                                resultPoints[3] = new ResultPoint(p4.X, p4.Y);
+
+                                detectedObject.resultPoints = resultPoints;
+
+                                //在克隆图上画框，不伤原图
+                                //Cv2.Polylines(drawMat, new[] { new[] { p1, p2, p3, p4 } }, true, Scalar.Red, 2);
+                                #endregion
+                            }
+
+                            detectedObjects.Add(detectedObject);
                         }
 
-                        detectedObjects.Add(detectedObject);
-                    }
-
-                    // 如果你需要保存画了框的图片（不需要就删掉）
-                    string folder = @"D:\TestOpenCv";
-                    if (!Directory.Exists(folder))
-                        Directory.CreateDirectory(folder);
-                    Cv2.ImWrite(@$"D:\TestOpenCv\image{DateTime.Now.ToString("yyyyMMddHHmmssfffffff")}.jpg", drawMat);
-
-
-                    drawMat.Dispose();
+                        // 如果你需要保存画了框的图片（不需要就删掉）
+                        //string folder = @"D:\TestOpenCv";
+                        //if (!Directory.Exists(folder))
+                        //    Directory.CreateDirectory(folder);
+                        //Cv2.ImWrite(@$"D:\TestOpenCv\image{DateTime.Now.ToString("yyyyMMddHHmmssfffffff")}.jpg", drawMat);
+                    //}
 
                     return true;
                 }

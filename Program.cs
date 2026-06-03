@@ -32,7 +32,7 @@ using static Test.Program;
 
 namespace Test
 {
-    class Program
+    public class Program
     {
         static async Task Main(string[] args)
         {
@@ -2381,7 +2381,7 @@ namespace Test
         public static void OpenCv()
         {
             DateTime Pstarttime = DateTime.Now;
-            string folderPath = @"C:\Users\liusi\Desktop\11";
+            string folderPath = @"C:\Users\liusi\Desktop\Zxing";
 
             //string folderPath = @"C:\Users\liusi\Desktop\PRD-Report\downloads";
             string SaveImageFile = @"C:\Users\liusi\Desktop\ZxingDemo";
@@ -2441,6 +2441,28 @@ namespace Test
                     {
                         var OpenCVresults = code.DecodeByOpenCV(imagePath);
 
+                       var leftmostQRCode=FindLeftmostQRCode(OpenCVresults);
+
+
+                        if (leftmostQRCode != null)
+                        {
+                            Console.WriteLine($"  最左边二维码信息：");
+                            Console.WriteLine($"    类型：{leftmostQRCode.Type}");
+                            Console.WriteLine($"    内容：{leftmostQRCode.Content}");
+
+
+
+
+                            // 显示坐标信息
+                            if (leftmostQRCode.resultPoints != null && leftmostQRCode.resultPoints.Length >= 4)
+                            {
+                                Console.WriteLine($"    左上角坐标：({leftmostQRCode.resultPoints[0]?.X:F1}, {leftmostQRCode.resultPoints[0]?.Y:F1})");
+                                Console.WriteLine($"    右上角坐标：({leftmostQRCode.resultPoints[1]?.X:F1}, {leftmostQRCode.resultPoints[1]?.Y:F1})");
+                                Console.WriteLine($"    右下角坐标：({leftmostQRCode.resultPoints[2]?.X:F1}, {leftmostQRCode.resultPoints[2]?.Y:F1})");
+                                Console.WriteLine($"    左下角坐标：({leftmostQRCode.resultPoints[3]?.X:F1}, {leftmostQRCode.resultPoints[3]?.Y:F1})");
+                            }
+                        }
+
                         // 处理识别结果
                         if (OpenCVresults != null && OpenCVresults.Count > 0)
                         {
@@ -2448,7 +2470,7 @@ namespace Test
                             Console.WriteLine($"  识别成功！找到 {OpenCVresults.Count} 个二维码：");
                             foreach (var result in OpenCVresults)
                             {
-                                Console.WriteLine($"    内容：{result}");
+                                Console.WriteLine($"    内容：{result.Content}");
                             }
                         }
                         else
