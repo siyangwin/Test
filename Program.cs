@@ -37,7 +37,7 @@ namespace Test
         static async Task Main(string[] args)
         {
             //Zxing();
-            OpenCv();
+            //OpenCv();
             //ChangeImages();
             //OCRChange();
             //OCRImage();
@@ -81,8 +81,10 @@ namespace Test
             // 调用方法，传入TXT文件路径
             //ReadTxtAndConvertToDecimal(@"E:\xxx.txt");
             //checkMath();
+            
 
-            //LoadingImg();
+            //内存爆炸测试
+            LoadingImg();
 
 
             //LoadExcel();
@@ -2381,7 +2383,7 @@ namespace Test
         public static void OpenCv()
         {
             DateTime Pstarttime = DateTime.Now;
-            string folderPath = @"C:\Users\liusi\Desktop\Zxing";
+            string folderPath = @"C:\Users\liusi\Desktop\一维码";
 
             //string folderPath = @"C:\Users\liusi\Desktop\PRD-Report\downloads";
             string SaveImageFile = @"C:\Users\liusi\Desktop\ZxingDemo";
@@ -2439,45 +2441,52 @@ namespace Test
 
                     try
                     {
-                        var OpenCVresults = code.DecodeByOpenCV(imagePath);
-
-                       var leftmostQRCode=FindLeftmostQRCode(OpenCVresults);
-
-
-                        if (leftmostQRCode != null)
-                        {
-                            Console.WriteLine($"  最左边二维码信息：");
-                            Console.WriteLine($"    类型：{leftmostQRCode.Type}");
-                            Console.WriteLine($"    内容：{leftmostQRCode.Content}");
+                        #region 二维码
+                        // var OpenCVresults = code.DecodeByOpenCV(imagePath);
 
 
+                        //var leftmostQRCode=FindLeftmostQRCode(OpenCVresults);
+                        // if (leftmostQRCode != null)
+                        // {
+                        //     Console.WriteLine($"  最左边二维码信息：");
+                        //     Console.WriteLine($"    类型：{leftmostQRCode.Type}");
+                        //     Console.WriteLine($"    内容：{leftmostQRCode.Content}");
 
 
-                            // 显示坐标信息
-                            if (leftmostQRCode.resultPoints != null && leftmostQRCode.resultPoints.Length >= 4)
-                            {
-                                Console.WriteLine($"    左上角坐标：({leftmostQRCode.resultPoints[0]?.X:F1}, {leftmostQRCode.resultPoints[0]?.Y:F1})");
-                                Console.WriteLine($"    右上角坐标：({leftmostQRCode.resultPoints[1]?.X:F1}, {leftmostQRCode.resultPoints[1]?.Y:F1})");
-                                Console.WriteLine($"    右下角坐标：({leftmostQRCode.resultPoints[2]?.X:F1}, {leftmostQRCode.resultPoints[2]?.Y:F1})");
-                                Console.WriteLine($"    左下角坐标：({leftmostQRCode.resultPoints[3]?.X:F1}, {leftmostQRCode.resultPoints[3]?.Y:F1})");
-                            }
-                        }
 
-                        // 处理识别结果
-                        if (OpenCVresults != null && OpenCVresults.Count > 0)
-                        {
-                            successCount++;
-                            Console.WriteLine($"  识别成功！找到 {OpenCVresults.Count} 个二维码：");
-                            foreach (var result in OpenCVresults)
-                            {
-                                Console.WriteLine($"    内容：{result.Content}");
-                            }
-                        }
-                        else
-                        {
-                            failCount++;
-                            Console.WriteLine($"  识别失败：未找到二维码");
-                        }
+
+                        //     // 显示坐标信息
+                        //     if (leftmostQRCode.resultPoints != null && leftmostQRCode.resultPoints.Length >= 4)
+                        //     {
+                        //         Console.WriteLine($"    左上角坐标：({leftmostQRCode.resultPoints[0]?.X:F1}, {leftmostQRCode.resultPoints[0]?.Y:F1})");
+                        //         Console.WriteLine($"    右上角坐标：({leftmostQRCode.resultPoints[1]?.X:F1}, {leftmostQRCode.resultPoints[1]?.Y:F1})");
+                        //         Console.WriteLine($"    右下角坐标：({leftmostQRCode.resultPoints[2]?.X:F1}, {leftmostQRCode.resultPoints[2]?.Y:F1})");
+                        //         Console.WriteLine($"    左下角坐标：({leftmostQRCode.resultPoints[3]?.X:F1}, {leftmostQRCode.resultPoints[3]?.Y:F1})");
+                        //     }
+                        // }
+
+                        // // 处理识别结果
+                        // if (OpenCVresults != null && OpenCVresults.Count > 0)
+                        // {
+                        //     successCount++;
+                        //     Console.WriteLine($"  识别成功！找到 {OpenCVresults.Count} 个二维码：");
+                        //     foreach (var result in OpenCVresults)
+                        //     {
+                        //         Console.WriteLine($"    内容：{result.Content}");
+                        //     }
+                        // }
+                        // else
+                        // {
+                        //     failCount++;
+                        //     Console.WriteLine($"  识别失败：未找到二维码");
+                        // }
+                        #endregion
+
+                        //条形码
+                        var OpenCVBarcoderesults = code.DetectBarcodesByOpenCv(imagePath);
+
+                        //OpenCVresults.AddRange(OpenCVBarcoderesults);
+
                         continue;
                     }
                     catch (Exception ex)
@@ -5092,8 +5101,8 @@ namespace Test
             //string filePath = @"C:\Users\liusi\Desktop\PRD-Report\DownLoadImage\CUHKMC-REPRT-038\CUHKMC-REPRT-038.txt";
             //string saveFolder = @"C:\Users\liusi\Desktop\PRD-Report\DownLoadImage\CUHKMC-REPRT-038";
 
-            string filePath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\Image\image.txt";
-            string saveFolder = @"C:\Users\liusi\Desktop\PRD-Report\NEW\Image";
+            string filePath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\XRC-REPRT-026--OPH-REPRT-OO2\image.txt";
+            string saveFolder = @"C:\Users\liusi\Desktop\PRD-Report\NEW\XRC-REPRT-026--OPH-REPRT-OO2";
 
             // 确保保存目录存在
             Directory.CreateDirectory(saveFolder);
@@ -5105,7 +5114,7 @@ namespace Test
             handler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
             using HttpClient safeClient = new HttpClient(handler);
             // 添加 apikey Header
-            safeClient.DefaultRequestHeaders.Add("apikey", "20f0f338aaf82309c53d4c069fa6248e3b203a66311be1f7a8c7b951aa298622");
+            safeClient.DefaultRequestHeaders.Add("apikey", "a30c6b7db243953f5656dd4adcada51b13782d646b842088bd5d9b288796867f");
             int counter = 0;
             var tasks = new List<Task>();
             // 逐行读取文件
@@ -6714,7 +6723,7 @@ namespace Test
         public static void LoadingImg()
         {
             //string folderPath = @"C:\Users\liusi\Desktop\Zxing";
-            string folderPath = @"C:\Users\liusi\Desktop\PRD-Report\downloads";
+            string folderPath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\Image";
             List<Stream> imageStreams = new List<Stream>();
 
             // 检查文件夹是否存在
@@ -6766,7 +6775,7 @@ namespace Test
                 return;
             }
 
-            using (var pdfStream = MergeImagesToPdfStream3(imageStreams))
+            using (var pdfStream = MergeImagesToPdfStream2(imageStreams))
             {
                 Console.WriteLine($"UploadPDF-PDF Stream Length: {pdfStream.Length}, Position: {pdfStream.Position}");
 
@@ -6819,10 +6828,10 @@ namespace Test
             }
         }
 
-        public static MemoryStream MergeImagesToPdfStream3(List<Stream> imageStreams)
+        public static MemoryStream MergeImagesToPdfStream4(List<Stream> imageStreams)
         {
             int MROMergePDFChunkSize = 4;
-            int MROMergePDFProcessorCount = 3;
+            int MROMergePDFProcessorCount = 1;
             var swTotal = Stopwatch.StartNew();
             var finalStream = new MemoryStream();
 
@@ -6860,7 +6869,7 @@ namespace Test
                     var (batch, index) = batchData;
                     var swChunk = Stopwatch.StartNew();
 
-                    var chunkDoc = new Aspose.Pdf.Document();
+                    using var chunkDoc = new Aspose.Pdf.Document();
 
                     foreach (var (imageData, originalIndex) in batch)
                     {
@@ -6890,7 +6899,7 @@ namespace Test
 
                     // 保存分块为临时内存流
                     var tempStream = new MemoryStream();
-                    //chunkDoc.Save(tempStream);
+                    chunkDoc.Save(tempStream);
                     tempStream.Position = 0;
 
                     // 存储到对应位置
@@ -6909,7 +6918,7 @@ namespace Test
                     if (tempDocs[i] != null && tempDocs[i].Length > 0)
                     {
                         tempDocs[i].Position = 0;
-                        var tempDoc = new Aspose.Pdf.Document(tempDocs[i]);
+                        using var tempDoc = new Aspose.Pdf.Document(tempDocs[i]);
                         // 批量复制页面
                         if (tempDoc.Pages.Count > 0)
                         {
@@ -6942,6 +6951,251 @@ namespace Test
             }
         }
 
+
+        public static MemoryStream MergeImagesToPdfStream3(List<Stream> imageStreams)
+        {
+            int MROMergePDFChunkSize = 4;
+            int MROMergePDFProcessorCount = 1;
+            var swTotal = Stopwatch.StartNew();
+            var finalStream = new MemoryStream();
+            MemoryStream[] tempDocs=new MemoryStream[0];
+            try
+            {
+                // 分块处理
+                var chunkSize = Math.Max(1, MROMergePDFChunkSize);
+                var batches = new List<(List<(byte[] Data, int OriginalIndex)> Batch, int BatchIndex)>();
+
+                for (int i = 0; i < imageStreams.Count; i += chunkSize)
+                {
+                    // 这里先占个位置，结构保持不变
+                    batches.Add((new List<(byte[], int)>(), i / chunkSize));
+                }
+
+                // 并发处理各批次，生成临时PDF文档
+                tempDocs = new MemoryStream[batches.Count];
+                var maxDegree = Math.Max(1, MROMergePDFProcessorCount);
+                Parallel.ForEach(batches, new ParallelOptions { MaxDegreeOfParallelism = maxDegree }, batchData =>
+                {
+                    var (batch, index) = batchData;
+                    var swChunk = Stopwatch.StartNew();
+
+                    using var chunkDoc = new Aspose.Pdf.Document();
+
+                    // 计算当前批次对应原始图片的开始/结束位置
+                    int start = index * chunkSize;
+                    int end = Math.Min(start + chunkSize, imageStreams.Count);
+
+                    // 直接从原始 imageStreams 取图片，不使用batch里的空数据
+                    for (int i = start; i < end; i++)
+                    {
+                        var stream = imageStreams[i];
+                        if (stream == null) continue;
+                        if (stream.CanSeek) stream.Position = 0;
+
+                        float width, height;
+                        using (var imageInfo = SkiaSharp.SKImage.FromEncodedData(stream))
+                        {
+                            width = imageInfo.Width;
+                            height = imageInfo.Height;
+                        }
+
+                        if (stream.CanSeek) stream.Position = 0;
+
+                        var page = chunkDoc.Pages.Add();
+                        page.PageInfo.Width = width;
+                        page.PageInfo.Height = height;
+                        page.PageInfo.Margin = new Aspose.Pdf.MarginInfo(0, 0, 0, 0);
+
+                        var pdfImage = new Aspose.Pdf.Image
+                        {
+                            ImageStream = stream,
+                            FixWidth = width,
+                            FixHeight = height,
+                            Margin = new Aspose.Pdf.MarginInfo(0, 0, 0, 0)
+                        };
+
+                        page.Paragraphs.Add(pdfImage);
+                    }
+
+                    // 保存分块为临时内存流
+                    var tempStream = new MemoryStream();
+                    chunkDoc.Save(tempStream);
+                    tempStream.Position = 0;
+
+                    // 存储到对应位置
+                    tempDocs[index] = tempStream;
+
+                    swChunk.Stop();
+                    Console.WriteLine($"UploadPDF-MergeImagesToPdfStream: Processing of chunk {index + 1} completed. Time taken: {swChunk.ElapsedMilliseconds} ms. Number of pages: {batch.Count}. MaxDegreeOfParallelism: {maxDegree}");
+                });
+
+                // 创建最终文档
+                using var finalDoc = new Aspose.Pdf.Document();
+
+                // 按顺序从每个临时文档复制页面
+                for (int i = 0; i < tempDocs.Length; i++)
+                {
+                    if (tempDocs[i] != null && tempDocs[i].Length > 0)
+                    {
+                        tempDocs[i].Position = 0;
+                        using var tempDoc = new Aspose.Pdf.Document(tempDocs[i]);
+                        // 批量复制页面
+                        if (tempDoc.Pages.Count > 0)
+                        {
+                            finalDoc.Pages.Add(tempDoc.Pages);
+                        }
+                    }
+                }
+
+                // 保存到最终流
+                //finalDoc.Save(finalStream);
+                finalStream.Position = 0;
+
+                // 释放临时流
+                foreach (var tempDoc in tempDocs)
+                {
+                    tempDoc?.Dispose();
+                }
+
+                swTotal.Stop();
+                Console.WriteLine($"UploadPDF-MergeImagesToPdfStream: Output stream length: {finalStream.Length}, swTotal: {swTotal.ElapsedMilliseconds}ms");
+                //避免回收不全，再回收一次。
+                GC.Collect(2, GCCollectionMode.Forced, true, true);
+                GC.WaitForPendingFinalizers();
+                GC.Collect(2, GCCollectionMode.Forced, true, true);
+
+                return finalStream;
+            }
+            catch (Exception ex)
+            {
+
+
+                Console.WriteLine($"UploadPDF-MergeImagesToPdfStream：{ex.Message}", ex);
+                finalStream?.Dispose();
+                throw new Exception("System:Failed to merge images to PDF: " + ex.Message, ex);
+            }
+            finally
+            {
+                if (tempDocs.Length>0)
+                {
+                    // 释放临时流
+                    foreach (var tempDoc in tempDocs)
+                    {
+                        tempDoc?.Dispose();
+                    }
+                }
+               
+            }
+        }
+
+
+
+        public static MemoryStream MergeImagesToPdfStream2(List<Stream> imageStreams)
+        {
+            int MROMergePDFChunkSize = 4;
+            int MROMergePDFProcessorCount = 1;
+            var swTotal = Stopwatch.StartNew();
+            using var finalStream = new MemoryStream();
+            var tempDocs = new List<MemoryStream>();
+
+            try
+            {
+                // 分块处理
+                var chunkSize = Math.Max(1, MROMergePDFChunkSize);
+                var batchCount = (imageStreams.Count + chunkSize - 1) / chunkSize;
+
+                // 并发处理各批次，生成临时PDF文档
+                tempDocs = new List<MemoryStream>(new MemoryStream[batchCount]);
+                var maxDegree = Math.Max(1, MROMergePDFProcessorCount);
+                Parallel.For(0, batchCount, new ParallelOptions { MaxDegreeOfParallelism = maxDegree }, index =>
+                {
+                    var swChunk = Stopwatch.StartNew();
+
+                    using var chunkDoc = new Aspose.Pdf.Document();
+
+                    // 计算当前批次对应原始图片的开始/结束位置
+                    int start = index * chunkSize;
+                    int end = Math.Min(start + chunkSize, imageStreams.Count);
+
+                    // 直接从原始 imageStreams 取图片，不使用batch里的空数据
+                    for (int i = start; i < end; i++)
+                    {
+                        var stream = imageStreams[i];
+                        if (stream == null) continue;
+                        if (stream.CanSeek) stream.Position = 0;
+
+                        float width, height;
+                        using (var imageInfo = SkiaSharp.SKImage.FromEncodedData(stream))
+                        {
+                            width = imageInfo.Width;
+                            height = imageInfo.Height;
+                        }
+
+                        if (stream.CanSeek) stream.Position = 0;
+
+                        var page = chunkDoc.Pages.Add();
+                        page.PageInfo.Width = width;
+                        page.PageInfo.Height = height;
+                        page.PageInfo.Margin = new Aspose.Pdf.MarginInfo(0, 0, 0, 0);
+
+                        var pdfImage = new Aspose.Pdf.Image
+                        {
+                            ImageStream = stream,
+                            FixWidth = width,
+                            FixHeight = height,
+                            Margin = new Aspose.Pdf.MarginInfo(0, 0, 0, 0)
+                        };
+
+                        page.Paragraphs.Add(pdfImage);
+                    }
+
+                    // 保存分块为临时内存流
+                    var tempStream = new MemoryStream();
+                    chunkDoc.Save(tempStream);
+                    tempStream.Position = 0;
+
+                    // 存储到对应位置
+                    tempDocs[index] = tempStream;
+
+                    swChunk.Stop();
+                    Console.WriteLine($"UploadPDF-MergeImagesToPdfStream: Processing of chunk {index + 1} completed. Time taken: {swChunk.ElapsedMilliseconds} ms. Number of pages: {batchCount}. MaxDegreeOfParallelism: {maxDegree}");
+                });
+
+                // 创建最终文档
+                using var finalDoc = new Aspose.Pdf.Document();
+
+                // 按顺序从每个临时文档复制页面
+                foreach (var tempStream in tempDocs)
+                {
+                    if (tempStream == null || tempStream.Length == 0) continue;
+                    tempStream.Position = 0;
+                    using var tempDoc = new Aspose.Pdf.Document(tempStream);
+                    if (tempDoc.Pages.Count > 0)
+                        finalDoc.Pages.Add(tempDoc.Pages);
+                }
+
+                // 保存到最终流
+                finalDoc.Save(finalStream);
+                finalStream.Position = 0;
+
+                swTotal.Stop();
+                Console.WriteLine($"UploadPDF-MergeImagesToPdfStream: Output stream length: {finalStream.Length}, swTotal: {swTotal.ElapsedMilliseconds}ms");
+
+                return finalStream;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"UploadPDF-MergeImagesToPdfStream：{ex.Message}", ex);
+                throw new Exception("System:Failed to merge images to PDF: " + ex.Message, ex);
+            }
+            finally
+            {
+                foreach (var stream in tempDocs)
+                {
+                    stream?.Dispose();
+                }
+            }
+        }
 
         public static MemoryStream SimpleTestPdf(string testImagePath)
         {

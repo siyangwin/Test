@@ -16,11 +16,15 @@ namespace Test
         // 模型目录：程序运行目录下 models 文件夹
         //var baseDir = AppDomain.CurrentDomain.BaseDirectory;
         // 指定你的模型文件路径（确保在 Linux 服务器上这些文件也存在）
-        static string detect_prototxt = Path.Combine("data", "wechat_qrcode", "detect.prototxt");
-        static string detect_caffemodel = Path.Combine("data", "wechat_qrcode", "detect.caffemodel");
-        static string sr_prototxt = Path.Combine("data", "wechat_qrcode", "sr.prototxt");
-        static string sr_caffemodel = Path.Combine("data", "wechat_qrcode", "sr.caffemodel");
-
+        //static string detect_prototxt = Path.Combine("data", "wechat_qrcode", "detect.prototxt");
+        //static string detect_caffemodel = Path.Combine("data", "wechat_qrcode", "detect.caffemodel");
+        //static string sr_prototxt = Path.Combine("data", "wechat_qrcode", "sr.prototxt");
+        //static string sr_caffemodel = Path.Combine("data", "wechat_qrcode", "sr.caffemodel");
+        static string basePath = Path.Combine(Directory.GetCurrentDirectory(), "data", "wechat_qrcode");
+        static string detect_prototxt = Path.Combine(basePath, "detect.prototxt");
+        static string detect_caffemodel = Path.Combine(basePath, "detect.caffemodel");
+        static string sr_prototxt = Path.Combine(basePath, "sr.prototxt");
+        static string sr_caffemodel = Path.Combine(basePath, "sr.caffemodel");
 
         #region Teru.Code.WechatQrcode.Lite  Nget
         //static WeChatQRCode opencvDecoder;
@@ -661,6 +665,67 @@ namespace Test
                 }
             }
         }
+
+        public List<DetectedObject> DetectBarcodesByOpenCv(string imagePath)
+        {
+            // 校验模型文件
+            if (!File.Exists(detect_prototxt) || !File.Exists(detect_caffemodel)
+                || !File.Exists(sr_prototxt) || !File.Exists(sr_caffemodel))
+                throw new FileNotFoundException("模型文件缺失", basePath);
+
+            List<DetectedObject> resultList = new List<DetectedObject>();
+
+            // 流转Mat
+            //using var ms = new MemoryStream();
+            //imageStream.CopyTo(ms);
+            //var bytes = ms.ToArray();
+            //using Mat src = Cv2.ImDecode(bytes, ImreadModes.Color);
+
+            using Mat src = Cv2.ImRead(imagePath, ImreadModes.Color);
+
+            #region 2.BarcodeDetector识别一维条码（复用sr超分模型）
+            using var barDetector = new BarcodeDetector(sr_prototxt, sr_caffemodel);
+
+            barDetector.SetDownsamplingThreshold(900);
+            barDetector.SetGradientThreshold(25);
+            barDetector.SetDetectorScales(new float[] { 0.01f, 0.02f, 0.03f, 0.05f, 0.07f, 0.09f });
+
+
+            // detectAndDecodeWithType：返回内容、条码类型、四角坐标
+            //var barRes = barDetector.DetectAndDecodeWithType(src, out var barTypes, out var barPointsArr);
+            barDetector.DetectAndDecode(src, out var points, out var results, out var types);
+
+            for (int i = 0; i < results.Length; i++)
+            {
+                string content = results[i];
+                if (string.IsNullOrEmpty(content)) continue;
+
+                var p0 = points[i * 4 + 0];
+                var p1 = points[i * 4 + 1];
+                var p2 = points[i * 4 + 2];
+                var p3 = points[i * 4 + 3];
+
+                resultList.Add(new DetectedObject
+                {
+                    Type = types[i],
+                    Content = content,
+                    resultPoints = new[]
+                    {
+                new ResultPoint(p0.X, p0.Y),
+                new ResultPoint(p1.X, p1.Y),
+                new ResultPoint(p2.X, p2.Y),
+                new ResultPoint(p3.X, p3.Y)
+            }
+                });
+                Console.WriteLine($"识别成功：{content} 类型：{types[i]}");
+            }
+
+
+            #endregion
+
+            return resultList;
+        }
+
         #endregion
 
         #region
