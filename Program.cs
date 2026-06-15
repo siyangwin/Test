@@ -1,4 +1,4 @@
-﻿using Aspose.BarCode.BarCodeRecognition;
+using Aspose.BarCode.BarCodeRecognition;
 using ClosedXML.Excel;
 using DevExpress.Office.DigitalSignatures;
 using DevExpress.Pdf;
@@ -84,8 +84,9 @@ namespace Test
             
 
             //内存爆炸测试
-            LoadingImg();
+            //LoadingImg();
 
+            LoadingImgmimo();
 
             //LoadExcel();
             Console.WriteLine();
@@ -7248,6 +7249,134 @@ namespace Test
                 Console.WriteLine($"生成PDF失败：{ex.Message}");
                 finalStream?.Dispose();
                 throw;
+            }
+        }
+        #endregion
+
+        #region MIMO优化版内存测试
+        public static void LoadingImgmimo()
+        {
+            string folderPath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\Image";
+            List<Stream> imageStreams = new List<Stream>();
+
+            if (!Directory.Exists(folderPath))
+            {
+                Console.WriteLine($"文件夹不存在：{folderPath}");
+                return;
+            }
+
+            string[] imageExtensions = { "*.jpg", "*.jpeg", "*.png", "*.bmp", "*.gif", "*.tiff", "*.tif" };
+
+            foreach (string extension in imageExtensions)
+            {
+                try
+                {
+                    string[] files = Directory.GetFiles(folderPath, extension, SearchOption.AllDirectories);
+                    foreach (string filePath in files)
+                    {
+                        Stream stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+                        imageStreams.Add(stream);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"搜索 {extension} 文件时出错：{ex.Message}");
+                }
+            }
+
+            if (imageStreams.Count == 0)
+            {
+                Console.WriteLine($"文件夹中没有找到图片文件：{folderPath}");
+                return;
+            }
+
+            Console.WriteLine($"[MIMO] 共加载 {imageStreams.Count} 张图片");
+            Console.WriteLine($"[MIMO] 启动前内存: {GC.GetTotalMemory(false) / 1024 / 1024} MB");
+
+            using (var pdfStream = MergeImagesToPdfStreambymimo(imageStreams))
+            {
+                Console.WriteLine($"[MIMO] PDF Stream Length: {pdfStream.Length}, Position: {pdfStream.Position}");
+            }
+
+            foreach (var stream in imageStreams)
+            {
+                stream?.Dispose();
+            }
+
+            Console.WriteLine($"[MIMO] 完成后内存: {GC.GetTotalMemory(true) / 1024 / 1024} MB");
+        }
+
+        public static MemoryStream MergeImagesToPdfStreambymimo(List<Stream> imageStreams)
+        {
+            var swTotal = Stopwatch.StartNew();
+            var finalStream = new MemoryStream();
+
+            try
+            {
+                using var finalDoc = new Aspose.Pdf.Document();
+
+                int batchSize = 4;
+                int totalBatches = (imageStreams.Count + batchSize - 1) / batchSize;
+
+                for (int batchIndex = 0; batchIndex < totalBatches; batchIndex++)
+                {
+                    int start = batchIndex * batchSize;
+                    int end = Math.Min(start + batchSize, imageStreams.Count);
+
+                    for (int i = start; i < end; i++)
+                    {
+                        var stream = imageStreams[i];
+                        if (stream == null) continue;
+                        if (stream.CanSeek) stream.Position = 0;
+
+                        float width, height;
+                        using (var imageInfo = SkiaSharp.SKImage.FromEncodedData(stream))
+                        {
+                            width = imageInfo.Width;
+                            height = imageInfo.Height;
+                        }
+
+                        var page = finalDoc.Pages.Add();
+                        page.PageInfo.Width = width;
+                        page.PageInfo.Height = height;
+                        page.PageInfo.Margin = new Aspose.Pdf.MarginInfo(0, 0, 0, 0);
+
+                        var pdfImage = new Aspose.Pdf.Image
+                        {
+                            ImageStream = stream,
+                            FixWidth = width,
+                            FixHeight = height,
+                            Margin = new Aspose.Pdf.MarginInfo(0, 0, 0, 0)
+                        };
+
+                        page.Paragraphs.Add(pdfImage);
+                    }
+
+                    Console.WriteLine($"[MIMO] Batch {batchIndex + 1}/{totalBatches} done, pages so far: {finalDoc.Pages.Count}, memory: {GC.GetTotalMemory(false) / 1024 / 1024} MB");
+
+                    if (batchIndex % 10 == 9)
+                    {
+                        GC.Collect(0, GCCollectionMode.Optimized);
+                    }
+                }
+
+                finalDoc.Save(finalStream);
+                finalStream.Position = 0;
+
+                swTotal.Stop();
+                Console.WriteLine($"[MIMO] Output stream length: {finalStream.Length}, swTotal: {swTotal.ElapsedMilliseconds}ms");
+
+                GC.Collect(2, GCCollectionMode.Forced, true, true);
+                GC.WaitForPendingFinalizers();
+                GC.Collect(2, GCCollectionMode.Forced, true, true);
+
+                return finalStream;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[MIMO] MergeImagesToPdfStreambymimo: {ex.Message}", ex);
+                finalStream?.Dispose();
+                throw new Exception("System:Failed to merge images to PDF: " + ex.Message, ex);
             }
         }
         #endregion
