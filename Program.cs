@@ -6776,13 +6776,17 @@ namespace Test
                 return;
             }
 
+            Console.WriteLine($"[OLD] 共加载 {imageStreams.Count} 张图片");
+            Console.WriteLine($"[OLD] 启动前内存: {GC.GetTotalMemory(false) / 1024 / 1024} MB");
+
             using (var pdfStream = MergeImagesToPdfStream2(imageStreams))
             {
                 Console.WriteLine($"UploadPDF-PDF Stream Length: {pdfStream.Length}, Position: {pdfStream.Position}");
 
-
                 //UploadFile(pdfStream);
             }
+
+            Console.WriteLine($"[OLD] 完成后内存: {GC.GetTotalMemory(true) / 1024 / 1024} MB");
 
             //using (var pdfStream = SimpleTestPdf())
             //{
@@ -7094,7 +7098,7 @@ namespace Test
         public static MemoryStream MergeImagesToPdfStream2(List<Stream> imageStreams)
         {
             int MROMergePDFChunkSize = 4;
-            int MROMergePDFProcessorCount = 1;
+            int MROMergePDFProcessorCount = 2;
             var swTotal = Stopwatch.StartNew();
             using var finalStream = new MemoryStream();
             var tempDocs = new List<MemoryStream>();
@@ -7159,8 +7163,10 @@ namespace Test
                     tempDocs[index] = tempStream;
 
                     swChunk.Stop();
-                    Console.WriteLine($"UploadPDF-MergeImagesToPdfStream: Processing of chunk {index + 1} completed. Time taken: {swChunk.ElapsedMilliseconds} ms. Number of pages: {batchCount}. MaxDegreeOfParallelism: {maxDegree}");
+                    Console.WriteLine($"UploadPDF-MergeImagesToPdfStream: Processing of chunk {index + 1} completed. Time taken: {swChunk.ElapsedMilliseconds} ms. Number of pages: {batchCount}. MaxDegreeOfParallelism: {maxDegree}. Memory: {GC.GetTotalMemory(false) / 1024 / 1024} MB");
                 });
+
+                Console.WriteLine($"[OLD] Parallel完成, tempDocs数量: {tempDocs.Count}, 内存: {GC.GetTotalMemory(false) / 1024 / 1024} MB");
 
                 // 创建最终文档
                 using var finalDoc = new Aspose.Pdf.Document();
@@ -7313,15 +7319,19 @@ namespace Test
 
             try
             {
-                using var finalDoc = new Aspose.Pdf.Document();
+                int chunkSize = 4;
+                var batchCount = (imageStreams.Count + chunkSize - 1) / chunkSize;
 
-                int batchSize = 4;
-                int totalBatches = (imageStreams.Count + batchSize - 1) / batchSize;
+                var tempDocs = new MemoryStream[batchCount];
 
-                for (int batchIndex = 0; batchIndex < totalBatches; batchIndex++)
+                for (int index = 0; index < batchCount; index++)
                 {
-                    int start = batchIndex * batchSize;
-                    int end = Math.Min(start + batchSize, imageStreams.Count);
+                    var swChunk = Stopwatch.StartNew();
+
+                    using var chunkDoc = new Aspose.Pdf.Document();
+
+                    int start = index * chunkSize;
+                    int end = Math.Min(start + chunkSize, imageStreams.Count);
 
                     for (int i = start; i < end; i++)
                     {
@@ -7336,7 +7346,7 @@ namespace Test
                             height = imageInfo.Height;
                         }
 
-                        var page = finalDoc.Pages.Add();
+                        var page = chunkDoc.Pages.Add();
                         page.PageInfo.Width = width;
                         page.PageInfo.Height = height;
                         page.PageInfo.Margin = new Aspose.Pdf.MarginInfo(0, 0, 0, 0);
@@ -7352,16 +7362,34 @@ namespace Test
                         page.Paragraphs.Add(pdfImage);
                     }
 
-                    Console.WriteLine($"[MIMO] Batch {batchIndex + 1}/{totalBatches} done, pages so far: {finalDoc.Pages.Count}, memory: {GC.GetTotalMemory(false) / 1024 / 1024} MB");
+                    var tempStream = new MemoryStream();
+                    chunkDoc.Save(tempStream);
+                    tempStream.Position = 0;
+                    tempDocs[index] = tempStream;
 
-                    if (batchIndex % 10 == 9)
-                    {
-                        GC.Collect(0, GCCollectionMode.Optimized);
-                    }
+                    swChunk.Stop();
+                    Console.WriteLine($"[MIMO] Chunk {index + 1}/{batchCount} done. Time: {swChunk.ElapsedMilliseconds}ms. Memory: {GC.GetTotalMemory(false) / 1024 / 1024} MB");
+                }
+
+                Console.WriteLine($"[MIMO] 所有Chunk完成, tempDocs数量: {tempDocs.Length}, 内存: {GC.GetTotalMemory(false) / 1024 / 1024} MB");
+
+                using var finalDoc = new Aspose.Pdf.Document();
+                foreach (var tempStream in tempDocs)
+                {
+                    if (tempStream == null || tempStream.Length == 0) continue;
+                    tempStream.Position = 0;
+                    using var tempDoc = new Aspose.Pdf.Document(tempStream);
+                    if (tempDoc.Pages.Count > 0)
+                        finalDoc.Pages.Add(tempDoc.Pages);
                 }
 
                 finalDoc.Save(finalStream);
                 finalStream.Position = 0;
+
+                foreach (var tempDoc in tempDocs)
+                {
+                    tempDoc?.Dispose();
+                }
 
                 swTotal.Stop();
                 Console.WriteLine($"[MIMO] Output stream length: {finalStream.Length}, swTotal: {swTotal.ElapsedMilliseconds}ms");
@@ -7379,6 +7407,8 @@ namespace Test
                 throw new Exception("System:Failed to merge images to PDF: " + ex.Message, ex);
             }
         }
+
+
         #endregion
 
         #region 读取Excel 补充超链接
