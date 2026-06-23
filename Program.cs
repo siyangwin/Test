@@ -1,4 +1,8 @@
 using Aspose.BarCode.BarCodeRecognition;
+using iTextSharp.text;
+using iTextSharp.text.pdf;
+using PdfSharpCore.Pdf;
+using PdfSharpCore.Drawing;
 using ClosedXML.Excel;
 using DevExpress.Office.DigitalSignatures;
 using DevExpress.Pdf;
@@ -24,6 +28,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using ZXing;
 using ZXing.Common;
@@ -81,12 +86,20 @@ namespace Test
             // 调用方法，传入TXT文件路径
             //ReadTxtAndConvertToDecimal(@"E:\xxx.txt");
             //checkMath();
-            
+
 
             //内存爆炸测试
             //LoadingImg();
 
-            LoadingImgmimo();
+            //LoadingImgmimo();
+            //LoadingImgStream();
+            //LoadingImgPdfSharp();
+            //await LoadingImgPdfSharpMultiThread();
+
+
+            //LoadingImgByDaniel();
+
+            LoadingImgStreamLowMemory();
 
             //LoadExcel();
             Console.WriteLine();
@@ -1025,7 +1038,7 @@ namespace Test
                 Console.WriteLine($"图片总耗时: {duration.TotalSeconds} 秒");
                 Console.WriteLine("--------------------------------------------------");
             }
-            
+
             // 输出统计结果
             Console.WriteLine("\n==================================================");
             Console.WriteLine("识别统计结果：");
@@ -1118,7 +1131,7 @@ namespace Test
 
             try
             {
-               //var xxx = DetectBarcodesAspose(imageStream);
+                //var xxx = DetectBarcodesAspose(imageStream);
 
                 using var skBitmap = SKBitmap.Decode(imageStream);
                 if (skBitmap == null)
@@ -3791,7 +3804,7 @@ namespace Test
 
             try
             {
-                using var image = Image.Load<Rgba32>(imageStream);
+                using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(imageStream);
                 if (image.Width == 0 || image.Height == 0) return false;
 
                 // 转灰度
@@ -3886,7 +3899,7 @@ namespace Test
 
             try
             {
-                using var image = Image.Load<Rgba32>(imageStream);
+                using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(imageStream);
                 if (image.Width <= 1 || image.Height <= 1) return false;
 
                 int totalPixels = image.Width * image.Height;
@@ -4006,7 +4019,7 @@ namespace Test
 
             try
             {
-                using var image = Image.Load<Rgba32>(imageStream);
+                using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(imageStream);
                 if (image.Width <= 1 || image.Height <= 1) return false;
 
                 int totalPixels = image.Width * image.Height;
@@ -4117,7 +4130,7 @@ namespace Test
 
             try
             {
-                using var image = Image.Load<Rgba32>(imageStream);
+                using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(imageStream);
                 if (image.Width <= 10 || image.Height <= 10) return false;
 
                 int totalPixels = image.Width * image.Height;
@@ -4290,7 +4303,7 @@ namespace Test
 
             try
             {
-                using var image = Image.Load<Rgba32>(imageStream);
+                using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(imageStream);
                 if (image.Width <= 10 || image.Height <= 10) return false;
 
                 int totalPixels = image.Width * image.Height;
@@ -4492,7 +4505,7 @@ namespace Test
 
             try
             {
-                using var image = Image.Load<Rgba32>(imageStream);
+                using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(imageStream);
                 if (image.Width <= 10 || image.Height <= 10) return false;
 
                 int totalPixels = image.Width * image.Height;
@@ -4785,7 +4798,7 @@ namespace Test
             if (!File.Exists(imageFilePath))
                 throw new FileNotFoundException("图片不存在", imageFilePath);
 
-            using var image = Image.Load<Rgba32>(imageFilePath);
+            using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(imageFilePath);
             // 预处理：极严格二值化（只保留深色区域）+ 裁剪边缘（去除截图边缘干扰）
             image.Mutate(x => x
                 .Grayscale()
@@ -4893,7 +4906,7 @@ namespace Test
                 try
                 {
                     bool hasSig = HasSignature(file);
-                    using var img = Image.Load<Rgba32>(file);
+                    using var img = SixLabors.ImageSharp.Image.Load<Rgba32>(file);
                     //img.Mutate(x => x.Grayscale().BinaryThreshold(0.9f).Crop(new Rectangle(10, 10, img.Width - 20, img.Height - 20)));
 
                     // 修正后：
@@ -5071,11 +5084,11 @@ namespace Test
             foreach (var line in File.ReadLines(filePath))
             {
                 counter++;
-                if (counter== DoenbLoadNum+1)
+                if (counter == DoenbLoadNum + 1)
                 {
                     return;
                 }
-              
+
                 // 去除首尾空白字符
                 var id = line.Trim();
                 // 跳过空行
@@ -5157,7 +5170,7 @@ namespace Test
                     //using var headResp = await safeClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, url));
                     if (headResp.IsSuccessStatusCode)
                     {
-                        realFileName = $"[{id}]"+GetFileNameFromHeader(headResp) ?? realFileName;
+                        realFileName = $"[{id}]" + GetFileNameFromHeader(headResp) ?? realFileName;
                     }
                     else
                     {
@@ -6071,7 +6084,7 @@ namespace Test
                     var fieldInfo = new PdfSignatureFieldInfo(new List<int> { 1 })
                     {
                         // SignatureBounds = new PdfRectangle(100, 100, 300, 200), // X1,Y1,X2,Y2
-                        SignatureBounds = new PdfRectangle(100, 100, 300, 200),
+                        SignatureBounds = new DevExpress.Pdf.PdfRectangle(100, 100, 300, 200),
                         //SignatureBounds = new PdfRectangle(50, 650, 250, 750), // 左上角：X1=50, Y1=650, X2=250, Y2=750
                         Name = "Signature_Field"
                     };
@@ -6206,7 +6219,7 @@ namespace Test
                         var fieldInfo = new PdfSignatureFieldInfo(new List<int> { 1 })
                         {
                             // SignatureBounds = new PdfRectangle(100, 100, 300, 200), // X1,Y1,X2,Y2
-                            SignatureBounds = new PdfRectangle(100, 100, 300, 200),
+                            SignatureBounds = new DevExpress.Pdf.PdfRectangle(100, 100, 300, 200),
                             //SignatureBounds = new PdfRectangle(50, 650, 250, 750), // 左上角：X1=50, Y1=650, X2=250, Y2=750
                             Name = "Signature_Field"
                         };
@@ -6444,7 +6457,7 @@ namespace Test
                     var fieldInfo = new PdfSignatureFieldInfo(new List<int> { 1 })
                     {
                         // SignatureBounds = new PdfRectangle(100, 100, 300, 200), // X1,Y1,X2,Y2
-                        SignatureBounds = new PdfRectangle(100, 100, 300, 200),
+                        SignatureBounds = new DevExpress.Pdf.PdfRectangle(100, 100, 300, 200),
                         //SignatureBounds = new PdfRectangle(50, 650, 250, 750), // 左上角：X1=50, Y1=650, X2=250, Y2=750
                         Name = "Signature_Field"
                     };
@@ -6644,7 +6657,7 @@ namespace Test
         #endregion
 
         #region 读取文本文件测试数据类型
-        
+
         /// <summary>
         /// 读取TXT文件并逐行转换为小数
         /// </summary>
@@ -6717,6 +6730,73 @@ namespace Test
             decimal ComplexityEnd = 0;
             string AnaesthesiologistEpiduralAnalgesia = $"$ {Math.Round((obstetricFeeRangeStart + ComplexityStart) / 3m / 1000m) * 1000m}  - $ {Math.Round((obstetricFeeRangeEnd + ComplexityEnd) / 3m / 1000m) * 1000m}";
             Console.WriteLine(AnaesthesiologistEpiduralAnalgesia);
+        }
+        #endregion
+
+
+        #region 读取Excel 补充超链接
+        public static void LoadExcel()
+        {
+
+            var filePath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\20260428-20260528.xlsx";
+            var imageFolder = @"C:\Users\liusi\Desktop\PRD-Report\NEW\Image";
+
+
+            // 打开文件
+            using var wb = new XLWorkbook(filePath); // XLWorkbook 就是它
+            var ws = wb.Worksheet("Sheet1");
+
+            int rowCount = ws.RowsUsed().Count();
+
+            for (int row = 2; row <= rowCount; row++)  // 第2行开始（跳过表头）
+            {
+                // 读取 A 列编号 ✅
+                string TreeObjectId = ws.Cell(row, 10).GetString().Trim();
+
+                if (string.IsNullOrEmpty(TreeObjectId)) continue;
+
+                // 找 [id] 开头的图片
+                string findName = $"[{TreeObjectId}]";
+                string found = FindImage(imageFolder, findName);
+
+
+
+                if (!string.IsNullOrWhiteSpace(found))
+                {
+                    Console.WriteLine("No." + row + ":存在文件，补充数据。");
+                    //写入文件名
+                    ws.Cell(row, 12).Value = found;
+
+                    //写入超链接（动态 L 列）
+                    // 🔥 正确公式：=HYPERLINK("Image\"&L2&"",L2)  自动变 L2、L3、L4...
+                    ws.Cell(row, 13).FormulaA1 = $"=HYPERLINK(\"Image\\\"&L{row}&\"\", L{row})";
+                }
+                else
+                {
+                    Console.WriteLine("No." + row + ":不存在文件,跳过。");
+                }
+
+                //if (row>=260)
+                //{
+                //    break;
+                //}
+            }
+
+            string targetPath = Path.Combine(Path.GetDirectoryName(filePath),  // 取原文件所在目录
+               Path.GetFileNameWithoutExtension(filePath) + "_" + DateTime.Now.ToString("yyyyMMddHHmmssfffffff") + ".xlsx"  // 原名_结果
+             );
+
+            wb.SaveAs(targetPath);
+            Console.WriteLine("完成！");
+        }
+
+        static string FindImage(string folder, string startWith)
+        {
+            if (!Directory.Exists(folder))
+                return null;
+
+            var files = Directory.GetFiles(folder, $"{startWith}*", SearchOption.TopDirectoryOnly);
+            return files.Length > 0 ? Path.GetFileName(files[0]) : null;
         }
         #endregion
 
@@ -6963,7 +7043,7 @@ namespace Test
             int MROMergePDFProcessorCount = 1;
             var swTotal = Stopwatch.StartNew();
             var finalStream = new MemoryStream();
-            MemoryStream[] tempDocs=new MemoryStream[0];
+            MemoryStream[] tempDocs = new MemoryStream[0];
             try
             {
                 // 分块处理
@@ -7069,6 +7149,10 @@ namespace Test
                 GC.WaitForPendingFinalizers();
                 GC.Collect(2, GCCollectionMode.Forced, true, true);
 
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive);
+                GC.WaitForPendingFinalizers();
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive);
+
                 return finalStream;
             }
             catch (Exception ex)
@@ -7081,7 +7165,7 @@ namespace Test
             }
             finally
             {
-                if (tempDocs.Length>0)
+                if (tempDocs.Length > 0)
                 {
                     // 释放临时流
                     foreach (var tempDoc in tempDocs)
@@ -7089,7 +7173,7 @@ namespace Test
                         tempDoc?.Dispose();
                     }
                 }
-               
+
             }
         }
 
@@ -7260,10 +7344,254 @@ namespace Test
         #endregion
 
         #region MIMO优化版内存测试
+
+        #region 系统信息输出
+        static int CountSetBits(long n)
+        {
+            int count = 0;
+            while (n > 0)
+            {
+                count += (int)(n & 1);
+                n >>= 1;
+            }
+            return count;
+        }
+
+        public static void PrintSystemInfo(string tag = "")
+        {
+            var process = Process.GetCurrentProcess();
+            long totalRam = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
+            int logicalProcessors = Environment.ProcessorCount;
+            long affinityMask = (long)process.ProcessorAffinity;
+            int allowedCpus = CountSetBits(affinityMask);
+
+            Console.WriteLine($"[{tag}] ====== 系统信息 ======");
+            Console.WriteLine($"[{tag}] 系统总物理内存: {totalRam / 1024 / 1024} MB ({totalRam / 1024.0 / 1024.0 / 1024.0:F2} GB)");
+            Console.WriteLine($"[{tag}] 逻辑处理器总数: {logicalProcessors}");
+            Console.WriteLine($"[{tag}] 进程可用CPU核心: {allowedCpus} / {logicalProcessors} (Affinity: 0x{affinityMask:X})");
+            Console.WriteLine($"[{tag}] ======================");
+        }
+
+        public static string GetProcessMemoryInfo(string tag = "")
+        {
+            var process = Process.GetCurrentProcess();
+            long workingSet = process.WorkingSet64;
+            long privateMem = process.PrivateMemorySize64;
+            long managedHeap = GC.GetTotalMemory(false);
+            long totalRam = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
+            double wsPercent = (double)workingSet / totalRam * 100;
+            return $"[{tag}] 工作集(Tasks管理器)={workingSet / 1024 / 1024}MB({wsPercent:F1}%), 私有内存={privateMem / 1024 / 1024}MB, 托管堆={managedHeap / 1024 / 1024}MB";
+        }
+        #endregion
+
+        #region STREAM流式优化版
+        public static void LoadingImgStream()
+        {
+            string folderPath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\Image";
+
+            if (!Directory.Exists(folderPath))
+            {
+                Console.WriteLine($"文件夹不存在：{folderPath}");
+                return;
+            }
+
+            var imageExtensions = new[] { "*.jpg", "*.jpeg", "*.png", "*.bmp", "*.gif", "*.tiff", "*.tif" };
+            var imagePaths = new List<string>();
+
+            foreach (string extension in imageExtensions)
+            {
+                try
+                {
+                    imagePaths.AddRange(Directory.GetFiles(folderPath, extension, SearchOption.AllDirectories));
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"搜索 {extension} 文件时出错：{ex.Message}");
+                }
+            }
+
+            if (imagePaths.Count == 0)
+            {
+                Console.WriteLine($"文件夹中没有找到图片文件：{folderPath}");
+                return;
+            }
+
+            PrintSystemInfo("STREAM");
+            Console.WriteLine($"[STREAM] 共发现 {imagePaths.Count} 张图片");
+            Console.WriteLine($"[STREAM] 启动前: {GetProcessMemoryInfo("STREAM")}");
+
+            using (var pdfStream = MergeImagesToPdfStreamOptimized(imagePaths))
+            {
+                Console.WriteLine($"[STREAM] PDF Stream Length: {pdfStream.Length}");
+            }
+
+            Console.WriteLine($"[STREAM] 完成后: {GetProcessMemoryInfo("STREAM")}");
+        }
+
+        public static MemoryStream MergeImagesToPdfStreamOptimized(List<string> imagePaths)
+        {
+            var swTotal = Stopwatch.StartNew();
+            var finalStream = new MemoryStream();
+            var tempFilePaths = new List<string>();
+
+            try
+            {
+                int chunkSize = 4;
+                int batchCount = (imagePaths.Count + chunkSize - 1) / chunkSize;
+                string tempDir = Path.GetTempPath();
+
+                for (int index = 0; index < batchCount; index++)
+                {
+                    var swChunk = Stopwatch.StartNew();
+                    string tempPath = Path.Combine(tempDir, $"stream_chunk_{Guid.NewGuid():N}.pdf");
+                    tempFilePaths.Add(tempPath);
+
+                    int start = index * chunkSize;
+                    int end = Math.Min(start + chunkSize, imagePaths.Count);
+
+                    using (var chunkDoc = new Aspose.Pdf.Document())
+                    {
+                        var chunkStreams = new List<Stream>();
+
+                        for (int i = start; i < end; i++)
+                        {
+                            Stream stream = new FileStream(imagePaths[i], FileMode.Open, FileAccess.Read, FileShare.Read);
+                            chunkStreams.Add(stream);
+
+                            float width, height;
+                            try
+                            {
+                                var imageInfo = SixLabors.ImageSharp.Image.Identify(stream);
+                                width = imageInfo.Width;
+                                height = imageInfo.Height;
+                            }
+                            catch
+                            {
+                                if (stream.CanSeek) stream.Position = 0;
+                                using var imageInfo = SKImage.FromEncodedData(stream);
+                                width = imageInfo.Width;
+                                height = imageInfo.Height;
+                            }
+
+                            if (stream.CanSeek) stream.Position = 0;
+
+                            var page = chunkDoc.Pages.Add();
+                            page.PageInfo.Width = width;
+                            page.PageInfo.Height = height;
+                            page.PageInfo.Margin = new Aspose.Pdf.MarginInfo(0, 0, 0, 0);
+
+                            var pdfImage = new Aspose.Pdf.Image
+                            {
+                                ImageStream = stream,
+                                FixWidth = width,
+                                FixHeight = height,
+                                Margin = new Aspose.Pdf.MarginInfo(0, 0, 0, 0)
+                            };
+
+                            page.Paragraphs.Add(pdfImage);
+                        }
+
+                        chunkDoc.Save(tempPath);
+
+                        foreach (var s in chunkStreams)
+                            s?.Dispose();
+                    }
+
+                    swChunk.Stop();
+                    Console.WriteLine($"[STREAM] Chunk {index + 1}/{batchCount} done. Time: {swChunk.ElapsedMilliseconds}ms. {GetProcessMemoryInfo("STREAM")}");
+                }
+
+                GC.Collect(2, GCCollectionMode.Forced, true, true);
+                GC.WaitForPendingFinalizers();
+
+                Console.WriteLine($"[STREAM] 所有Chunk完成: {GetProcessMemoryInfo("STREAM")}");
+
+                var currentFiles = new List<string>(tempFilePaths);
+                int round = 0;
+
+                while (currentFiles.Count > 1)
+                {
+                    round++;
+                    var nextFiles = new List<string>();
+                    var swRound = Stopwatch.StartNew();
+
+                    for (int i = 0; i < currentFiles.Count; i += 2)
+                    {
+                        if (i + 1 >= currentFiles.Count)
+                        {
+                            nextFiles.Add(currentFiles[i]);
+                            continue;
+                        }
+
+                        string mergedPath = Path.Combine(tempDir, $"stream_merge_r{round}_{Guid.NewGuid():N}.pdf");
+                        tempFilePaths.Add(mergedPath);
+
+                        using (var mergedDoc = new Aspose.Pdf.Document())
+                        {
+                            using (var leftDoc = new Aspose.Pdf.Document(currentFiles[i]))
+                            {
+                                if (leftDoc.Pages.Count > 0)
+                                    mergedDoc.Pages.Add(leftDoc.Pages);
+                            }
+                            File.Delete(currentFiles[i]);
+
+                            using (var rightDoc = new Aspose.Pdf.Document(currentFiles[i + 1]))
+                            {
+                                if (rightDoc.Pages.Count > 0)
+                                    mergedDoc.Pages.Add(rightDoc.Pages);
+                            }
+                            File.Delete(currentFiles[i + 1]);
+
+                            mergedDoc.Save(mergedPath);
+                        }
+
+                        nextFiles.Add(mergedPath);
+                    }
+
+                    swRound.Stop();
+                    Console.WriteLine($"[STREAM] Merge round {round}: {currentFiles.Count} -> {nextFiles.Count}. Time: {swRound.ElapsedMilliseconds}ms. {GetProcessMemoryInfo("STREAM")}");
+                    currentFiles = nextFiles;
+                }
+
+                if (currentFiles.Count == 1)
+                {
+                    using (var finalDoc = new Aspose.Pdf.Document(currentFiles[0]))
+                    {
+                        finalDoc.Save(finalStream);
+                    }
+                    File.Delete(currentFiles[0]);
+                }
+
+                finalStream.Position = 0;
+
+                foreach (var path in tempFilePaths)
+                {
+                    try { if (File.Exists(path)) File.Delete(path); } catch { }
+                }
+
+                swTotal.Stop();
+                Console.WriteLine($"[STREAM] Output stream length: {finalStream.Length}, swTotal: {swTotal.ElapsedMilliseconds}ms");
+
+                return finalStream;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[STREAM] MergeImagesToPdfStreamOptimized: {ex.Message}", ex);
+                foreach (var path in tempFilePaths)
+                {
+                    try { if (File.Exists(path)) File.Delete(path); } catch { }
+                }
+                finalStream?.Dispose();
+                throw new Exception("System:Failed to merge images to PDF: " + ex.Message, ex);
+            }
+        }
+        #endregion
+
+        #region MIMO多线程优化版
         public static void LoadingImgmimo()
         {
             string folderPath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\Image";
-            List<Stream> imageStreams = new List<Stream>();
+            folderPath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\NewIMAGE";
 
             if (!Directory.Exists(folderPath))
             {
@@ -7272,17 +7600,13 @@ namespace Test
             }
 
             string[] imageExtensions = { "*.jpg", "*.jpeg", "*.png", "*.bmp", "*.gif", "*.tiff", "*.tif" };
+            var imagePaths = new List<string>();
 
             foreach (string extension in imageExtensions)
             {
                 try
                 {
-                    string[] files = Directory.GetFiles(folderPath, extension, SearchOption.AllDirectories);
-                    foreach (string filePath in files)
-                    {
-                        Stream stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-                        imageStreams.Add(stream);
-                    }
+                    imagePaths.AddRange(Directory.GetFiles(folderPath, extension, SearchOption.AllDirectories));
                 }
                 catch (Exception ex)
                 {
@@ -7290,42 +7614,520 @@ namespace Test
                 }
             }
 
-            if (imageStreams.Count == 0)
+            if (imagePaths.Count == 0)
             {
                 Console.WriteLine($"文件夹中没有找到图片文件：{folderPath}");
                 return;
             }
 
-            Console.WriteLine($"[MIMO] 共加载 {imageStreams.Count} 张图片");
-            Console.WriteLine($"[MIMO] 启动前内存: {GC.GetTotalMemory(false) / 1024 / 1024} MB");
+            PrintSystemInfo("MIMO");
+            Console.WriteLine($"[MIMO] 共发现 {imagePaths.Count} 张图片");
+            Console.WriteLine($"[MIMO] 启动前: {GetProcessMemoryInfo("MIMO")}");
 
-            using (var pdfStream = MergeImagesToPdfStreambymimo(imageStreams))
+            using (var pdfStream = MergeImagesToPdfStreambymimo(imagePaths))
             {
-                Console.WriteLine($"[MIMO] PDF Stream Length: {pdfStream.Length}, Position: {pdfStream.Position}");
+                Console.WriteLine($"[MIMO] PDF Stream Length: {pdfStream.Length}");
             }
 
-            foreach (var stream in imageStreams)
-            {
-                stream?.Dispose();
-            }
-
-            Console.WriteLine($"[MIMO] 完成后内存: {GC.GetTotalMemory(true) / 1024 / 1024} MB");
+            Console.WriteLine($"[MIMO] 完成后: {GetProcessMemoryInfo("MIMO")}");
         }
 
-        public static MemoryStream MergeImagesToPdfStreambymimo(List<Stream> imageStreams)
+        public static MemoryStream MergeImagesToPdfStreambymimo(List<string> imagePaths)
         {
             var swTotal = Stopwatch.StartNew();
             var finalStream = new MemoryStream();
+            var tempFilePaths = new List<string>();
 
             try
             {
                 int chunkSize = 4;
+                int batchCount = (imagePaths.Count + chunkSize - 1) / chunkSize;
+                string tempDir = Path.GetTempPath();
+                //int maxParallel = Math.Max(1, Environment.ProcessorCount);
+                int maxParallel = 2;
+
+                Console.WriteLine($"[MIMO] 并行度: {maxParallel}, ChunkSize: {chunkSize}, 批次数: {batchCount}");
+                Console.WriteLine($"[MIMO] Chunk处理前: {GetProcessMemoryInfo("MIMO")}");
+
+                var tempPathsArray = new string[batchCount];
+
+                Parallel.For(0, batchCount, new ParallelOptions { MaxDegreeOfParallelism = maxParallel }, index =>
+                {
+                    var swChunk = Stopwatch.StartNew();
+                    string tempPath = Path.Combine(tempDir, $"mimo_chunk_{Guid.NewGuid():N}.pdf");
+                    tempPathsArray[index] = tempPath;
+
+                    int start = index * chunkSize;
+                    int end = Math.Min(start + chunkSize, imagePaths.Count);
+
+                    using (var chunkDoc = new Aspose.Pdf.Document())
+                    {
+                        var localStreams = new List<Stream>();
+
+                        for (int i = start; i < end; i++)
+                        {
+                            Stream stream = new FileStream(imagePaths[i], FileMode.Open, FileAccess.Read, FileShare.Read);
+                            localStreams.Add(stream);
+
+                            float width, height;
+                            try
+                            {
+                                var imageInfo = SixLabors.ImageSharp.Image.Identify(stream);
+                                width = imageInfo.Width;
+                                height = imageInfo.Height;
+                            }
+                            catch
+                            {
+                                if (stream.CanSeek) stream.Position = 0;
+                                using var imageInfo = SKImage.FromEncodedData(stream);
+                                width = imageInfo.Width;
+                                height = imageInfo.Height;
+                            }
+
+                            if (stream.CanSeek) stream.Position = 0;
+
+                            var page = chunkDoc.Pages.Add();
+                            page.PageInfo.Width = width;
+                            page.PageInfo.Height = height;
+                            page.PageInfo.Margin = new Aspose.Pdf.MarginInfo(0, 0, 0, 0);
+
+                            var pdfImage = new Aspose.Pdf.Image
+                            {
+                                ImageStream = stream,
+                                FixWidth = width,
+                                FixHeight = height,
+                                Margin = new Aspose.Pdf.MarginInfo(0, 0, 0, 0)
+                            };
+
+                            page.Paragraphs.Add(pdfImage);
+                        }
+
+                        chunkDoc.Save(tempPath);
+
+                        foreach (var s in localStreams)
+                            s?.Dispose();
+                    }
+
+                    swChunk.Stop();
+                    Console.WriteLine($"[MIMO] Chunk {index + 1}/{batchCount} done. Time: {swChunk.ElapsedMilliseconds}ms. {GetProcessMemoryInfo("MIMO")}");
+                });
+
+                tempFilePaths.AddRange(tempPathsArray.Where(p => p != null));
+
+                GC.Collect(2, GCCollectionMode.Forced, true, true);
+                GC.WaitForPendingFinalizers();
+
+                Console.WriteLine($"[MIMO] 所有Chunk完成: {GetProcessMemoryInfo("MIMO")}");
+
+                var currentFiles = new List<string>(tempFilePaths);
+                int round = 0;
+
+                while (currentFiles.Count > 1)
+                {
+                    round++;
+                    var nextFiles = new List<string>();
+                    var swRound = Stopwatch.StartNew();
+
+                    for (int i = 0; i < currentFiles.Count; i += 2)
+                    {
+                        if (i + 1 >= currentFiles.Count)
+                        {
+                            nextFiles.Add(currentFiles[i]);
+                            continue;
+                        }
+
+                        string mergedPath = Path.Combine(tempDir, $"mimo_merge_r{round}_{Guid.NewGuid():N}.pdf");
+                        tempFilePaths.Add(mergedPath);
+
+                        using (var mergedDoc = new Aspose.Pdf.Document())
+                        {
+                            using (var leftDoc = new Aspose.Pdf.Document(currentFiles[i]))
+                            {
+                                if (leftDoc.Pages.Count > 0)
+                                    mergedDoc.Pages.Add(leftDoc.Pages);
+                            }
+                            File.Delete(currentFiles[i]);
+
+                            using (var rightDoc = new Aspose.Pdf.Document(currentFiles[i + 1]))
+                            {
+                                if (rightDoc.Pages.Count > 0)
+                                    mergedDoc.Pages.Add(rightDoc.Pages);
+                            }
+                            File.Delete(currentFiles[i + 1]);
+
+                            mergedDoc.Save(mergedPath);
+                        }
+
+                        nextFiles.Add(mergedPath);
+                    }
+
+                    swRound.Stop();
+                    Console.WriteLine($"[MIMO] Merge round {round}: {currentFiles.Count} -> {nextFiles.Count}. Time: {swRound.ElapsedMilliseconds}ms. {GetProcessMemoryInfo("MIMO")}");
+                    currentFiles = nextFiles;
+                }
+
+                if (currentFiles.Count == 1)
+                {
+                    using (var finalDoc = new Aspose.Pdf.Document(currentFiles[0]))
+                    {
+                        finalDoc.Save(finalStream);
+                    }
+                    File.Delete(currentFiles[0]);
+                }
+
+                finalStream.Position = 0;
+
+                foreach (var path in tempFilePaths)
+                {
+                    try { if (File.Exists(path)) File.Delete(path); } catch { }
+                }
+
+                swTotal.Stop();
+                Console.WriteLine($"[MIMO] Output stream length: {finalStream.Length}, swTotal: {swTotal.ElapsedMilliseconds}ms");
+
+                return finalStream;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[MIMO] MergeImagesToPdfStreambymimo: {ex.Message}", ex);
+                foreach (var path in tempFilePaths)
+                {
+                    try { if (File.Exists(path)) File.Delete(path); } catch { }
+                }
+                finalStream?.Dispose();
+                return null;
+                //throw new Exception("System:Failed to merge images to PDF: " + ex.Message, ex);
+            }
+        }
+        #endregion
+
+        #endregion
+
+        #region iTextSharp免费版
+        public static void LoadingImgPdfSharp()
+        {
+            string folderPath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\Image";
+            folderPath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\NewIMAGE";
+            string saveFolderPath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\PdfSharpOutput";
+
+            if (!Directory.Exists(folderPath))
+            {
+                Console.WriteLine($"文件夹不存在：{folderPath}");
+                return;
+            }
+
+            if (!Directory.Exists(saveFolderPath))
+            {
+                Directory.CreateDirectory(saveFolderPath);
+            }
+
+            var imageExtensions = new[] { "*.jpg", "*.jpeg", "*.png", "*.bmp", "*.gif", "*.tiff", "*.tif" };
+            var imagePaths = new List<string>();
+
+            foreach (string extension in imageExtensions)
+            {
+                try
+                {
+                    imagePaths.AddRange(Directory.GetFiles(folderPath, extension, SearchOption.AllDirectories));
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"搜索 {extension} 文件时出错：{ex.Message}");
+                }
+            }
+
+            if (imagePaths.Count == 0)
+            {
+                Console.WriteLine($"文件夹中没有找到图片文件：{folderPath}");
+                return;
+            }
+
+            PrintSystemInfo("ITEXT");
+            Console.WriteLine($"[ITEXT] 共发现 {imagePaths.Count} 张图片");
+            Console.WriteLine($"[ITEXT] 输出目录: {saveFolderPath}");
+            Console.WriteLine($"[ITEXT] 启动前: {GetProcessMemoryInfo("ITEXT")}");
+
+            var swTotal = Stopwatch.StartNew();
+            string finalPdfPath = Path.Combine(saveFolderPath, $"merged_{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
+
+            try
+            {
+                using (var fs = new FileStream(finalPdfPath, FileMode.Create, FileAccess.Write))
+                {
+                    var document = new Document(PageSize.A4, 0, 0, 0, 0);
+                    var writer = PdfWriter.GetInstance(document, fs);
+                    document.Open();
+
+                    for (int i = 0; i < imagePaths.Count; i++)
+                    {
+                        string imgPath = imagePaths[i];
+                        try
+                        {
+                            using var imgStream = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                            var image = iTextSharp.text.Image.GetInstance(imgStream);
+
+                            float pageWidth = document.PageSize.Width;
+                            float pageHeight = document.PageSize.Height;
+                            image.ScaleToFit(pageWidth, pageHeight);
+                            image.Alignment = Element.ALIGN_CENTER;
+
+                            document.NewPage();
+                            document.Add(image);
+
+                            if ((i + 1) % 50 == 0 || i == imagePaths.Count - 1)
+                            {
+                                Console.WriteLine($"[ITEXT] 进度: {i + 1}/{imagePaths.Count}. {GetProcessMemoryInfo("ITEXT")}");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"[ITEXT] 图片处理失败 {Path.GetFileName(imgPath)}: {ex.Message}");
+                        }
+                    }
+
+                    document.Close();
+                }
+
+                swTotal.Stop();
+                var fileInfo = new FileInfo(finalPdfPath);
+                Console.WriteLine($"[ITEXT] PDF已保存: {finalPdfPath}");
+                Console.WriteLine($"[ITEXT] 文件大小: {fileInfo.Length / 1024.0 / 1024.0:F2} MB");
+                Console.WriteLine($"[ITEXT] 总耗时: {swTotal.ElapsedMilliseconds}ms");
+                Console.WriteLine($"[ITEXT] 完成后: {GetProcessMemoryInfo("ITEXT")}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ITEXT] 错误: {ex.Message}");
+                Console.WriteLine(ex.StackTrace);
+            }
+        }
+
+        public static async Task LoadingImgPdfSharpMultiThread()
+        {
+            string folderPath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\Image";
+            folderPath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\NewIMAGE";
+            string saveFolderPath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\PdfSharpOutput";
+            int maxThreads = Environment.ProcessorCount;
+
+            if (!Directory.Exists(folderPath))
+            {
+                Console.WriteLine($"文件夹不存在：{folderPath}");
+                return;
+            }
+
+            if (!Directory.Exists(saveFolderPath))
+            {
+                Directory.CreateDirectory(saveFolderPath);
+            }
+
+            var imageExtensions = new[] { "*.jpg", "*.jpeg", "*.png", "*.bmp", "*.gif", "*.tiff", "*.tif" };
+            var imagePaths = new List<string>();
+
+            foreach (string extension in imageExtensions)
+            {
+                try
+                {
+                    imagePaths.AddRange(Directory.GetFiles(folderPath, extension, SearchOption.AllDirectories));
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"搜索 {extension} 文件时出错：{ex.Message}");
+                }
+            }
+
+            if (imagePaths.Count == 0)
+            {
+                Console.WriteLine($"文件夹中没有找到图片文件：{folderPath}");
+                return;
+            }
+
+            PrintSystemInfo("ITEXT-MT");
+            Console.WriteLine($"[ITEXT-MT] 共发现 {imagePaths.Count} 张图片");
+            Console.WriteLine($"[ITEXT-MT] 线程数: {maxThreads}");
+            Console.WriteLine($"[ITEXT-MT] 输出目录: {saveFolderPath}");
+            Console.WriteLine($"[ITEXT-MT] 启动前: {GetProcessMemoryInfo("ITEXT-MT")}");
+
+            var swTotal = Stopwatch.StartNew();
+            string finalPdfPath = Path.Combine(saveFolderPath, $"merged_mt_{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
+
+            try
+            {
+                float pageWidth = PageSize.A4.Width;
+                float pageHeight = PageSize.A4.Height;
+
+
+                maxThreads = 2;
+
+                Console.WriteLine($"[ITEXT-MT] 更新线程数: {maxThreads}");
+                var semaphore = new SemaphoreSlim(maxThreads);
+                var indexedImages = new ConcurrentBag<(int index, iTextSharp.text.Image image)>();
+
+                var swLoad = Stopwatch.StartNew();
+
+                var loadTasks = imagePaths.Select((imgPath, i) => Task.Run(async () =>
+                {
+                    await semaphore.WaitAsync();
+                    try
+                    {
+                        using var imgStream = new FileStream(imgPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                        var image = iTextSharp.text.Image.GetInstance(imgStream);
+                        image.ScaleToFit(pageWidth, pageHeight);
+                        image.Alignment = Element.ALIGN_CENTER;
+                        indexedImages.Add((i, image));
+
+                        if ((i + 1) % 50 == 0 || i == imagePaths.Count - 1)
+                        {
+                            Console.WriteLine($"[ITEXT-MT] 加载进度: {i + 1}/{imagePaths.Count}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[ITEXT-MT] 图片加载失败 {Path.GetFileName(imgPath)}: {ex.Message}");
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                })).ToArray();
+
+                await Task.WhenAll(loadTasks);
+                swLoad.Stop();
+                Console.WriteLine($"[ITEXT-MT] 并行加载完成, 耗时: {swLoad.ElapsedMilliseconds}ms");
+
+                var swWrite = Stopwatch.StartNew();
+
+                using (var fs = new FileStream(finalPdfPath, FileMode.Create, FileAccess.Write))
+                {
+                    var document = new Document(PageSize.A4, 0, 0, 0, 0);
+                    var writer = PdfWriter.GetInstance(document, fs);
+                    document.Open();
+
+                    foreach (var item in indexedImages.OrderBy(x => x.index))
+                    {
+                        document.NewPage();
+                        document.Add(item.image);
+                    }
+
+                    document.Close();
+                }
+
+                swWrite.Stop();
+                swTotal.Stop();
+
+                var fileInfo = new FileInfo(finalPdfPath);
+                Console.WriteLine($"[ITEXT-MT] PDF已保存: {finalPdfPath}");
+                Console.WriteLine($"[ITEXT-MT] 文件大小: {fileInfo.Length / 1024.0 / 1024.0:F2} MB");
+                Console.WriteLine($"[ITEXT-MT] 并行加载耗时: {swLoad.ElapsedMilliseconds}ms");
+                Console.WriteLine($"[ITEXT-MT] PDF写入耗时: {swWrite.ElapsedMilliseconds}ms");
+                Console.WriteLine($"[ITEXT-MT] 总耗时: {swTotal.ElapsedMilliseconds}ms");
+                Console.WriteLine($"[ITEXT-MT] 完成后: {GetProcessMemoryInfo("ITEXT-MT")}");
+
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive);
+                GC.WaitForPendingFinalizers();
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ITEXT-MT] 错误: {ex.Message}");
+                Console.WriteLine(ex.StackTrace);
+            }
+        }
+        #endregion
+
+        #region LoadingImgByDaniel
+
+        private const int TotalImages = 100;       // 总图片数
+        private const int ChunkSize = 4;          // 每块图片数 (免费版建议设小)
+        private const int ImageWidth = 2000;      // 模拟图片宽度
+        private const int ImageHeight = 3000;     // 模拟图片高度
+
+        public static void LoadingImgByDaniel()
+        {
+            try
+            {
+                while (true)
+                {
+                    string folderPath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\Image";
+
+                    if (!Directory.Exists(folderPath))
+                    {
+                        Console.WriteLine($"文件夹不存在：{folderPath}");
+                        return;
+                    }
+
+                    var imageExtensions = new[] { "*.jpg", "*.jpeg", "*.png", "*.bmp", "*.gif", "*.tiff", "*.tif" };
+                    var imagePaths = new List<string>();
+
+                    foreach (string extension in imageExtensions)
+                    {
+                        try
+                        {
+                            imagePaths.AddRange(Directory.GetFiles(folderPath, extension, SearchOption.AllDirectories));
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"搜索 {extension} 文件时出错：{ex.Message}");
+                        }
+                    }
+
+                    var imageStreams = new List<Stream>();
+                    foreach (var item in imagePaths)
+                    {
+                        Stream stream = new FileStream(item, FileMode.Open, FileAccess.Read, FileShare.Read);
+                        imageStreams.Add(stream);
+                    }
+
+                    // 2. 执行分块处理（不含最终合并）
+                    try
+                    {
+                        ProcessChunksOnly2(imageStreams, ChunkSize);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"\n[ERROR] {ex.Message}");
+                        Console.ResetColor();
+                    }
+
+                    // 3. 清理测试数据
+                    foreach (var s in imageStreams) s?.Dispose();
+
+                    PrintMemory("After final cleanup");
+
+                    Console.WriteLine("\n按 Y 重新运行测试，按其他任意键退出...");
+                    var key = Console.ReadKey(intercept: true);
+                    if (key.Key != ConsoleKey.Y)
+                        break;
+
+                    Console.WriteLine("\n" + new string('-', 60) + "\n");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"错误：{ex.Message}");
+            }
+
+            Console.ReadKey();
+        }
+
+        /// <summary>
+        /// ★ 核心测试方法：仅执行分块生成，验证内存释放
+        /// </summary>
+        private static void ProcessChunksOnly2(List<Stream> imageStreams, int chunkSize)
+        {
+            var swTotal = Stopwatch.StartNew();
+            var finalStream = new MemoryStream();
+            var tempDocs = new List<MemoryStream>();
+
+            try
+            {
                 var batchCount = (imageStreams.Count + chunkSize - 1) / chunkSize;
 
-                var tempDocs = new MemoryStream[batchCount];
-
-                for (int index = 0; index < batchCount; index++)
+                tempDocs = new List<MemoryStream>(new MemoryStream[batchCount]);
+                Parallel.For(0, batchCount, new ParallelOptions { MaxDegreeOfParallelism = 2 }, index =>
                 {
+                    PrintMemory($"Chunk {index + 1}/{batchCount} START");
+
                     var swChunk = Stopwatch.StartNew();
 
                     using var chunkDoc = new Aspose.Pdf.Document();
@@ -7346,6 +8148,8 @@ namespace Test
                             height = imageInfo.Height;
                         }
 
+                        if (stream.CanSeek) stream.Position = 0;
+
                         var page = chunkDoc.Pages.Add();
                         page.PageInfo.Width = width;
                         page.PageInfo.Height = height;
@@ -7365,116 +8169,156 @@ namespace Test
                     var tempStream = new MemoryStream();
                     chunkDoc.Save(tempStream);
                     tempStream.Position = 0;
+
                     tempDocs[index] = tempStream;
 
                     swChunk.Stop();
-                    Console.WriteLine($"[MIMO] Chunk {index + 1}/{batchCount} done. Time: {swChunk.ElapsedMilliseconds}ms. Memory: {GC.GetTotalMemory(false) / 1024 / 1024} MB");
-                }
 
-                Console.WriteLine($"[MIMO] 所有Chunk完成, tempDocs数量: {tempDocs.Length}, 内存: {GC.GetTotalMemory(false) / 1024 / 1024} MB");
-
-                using var finalDoc = new Aspose.Pdf.Document();
-                foreach (var tempStream in tempDocs)
-                {
-                    if (tempStream == null || tempStream.Length == 0) continue;
-                    tempStream.Position = 0;
-                    using var tempDoc = new Aspose.Pdf.Document(tempStream);
-                    if (tempDoc.Pages.Count > 0)
-                        finalDoc.Pages.Add(tempDoc.Pages);
-                }
-
-                finalDoc.Save(finalStream);
-                finalStream.Position = 0;
-
-                foreach (var tempDoc in tempDocs)
-                {
-                    tempDoc?.Dispose();
-                }
+                    PrintMemory($"Chunk {index + 1}/{batchCount} END  ({swChunk.ElapsedMilliseconds}ms)");
+                });
 
                 swTotal.Stop();
-                Console.WriteLine($"[MIMO] Output stream length: {finalStream.Length}, swTotal: {swTotal.ElapsedMilliseconds}ms");
 
-                GC.Collect(2, GCCollectionMode.Forced, true, true);
-                GC.WaitForPendingFinalizers();
-                GC.Collect(2, GCCollectionMode.Forced, true, true);
-
-                return finalStream;
+                foreach (var item in tempDocs)
+                {
+                    Console.WriteLine($"UploadPDF-MergeImagesToPdfStream: Output stream length: {item.Length}, swTotal: {swTotal.ElapsedMilliseconds}ms");
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[MIMO] MergeImagesToPdfStreambymimo: {ex.Message}", ex);
-                finalStream?.Dispose();
                 throw new Exception("System:Failed to merge images to PDF: " + ex.Message, ex);
             }
-        }
-
-
-        #endregion
-
-        #region 读取Excel 补充超链接
-        public static void LoadExcel()
-        {
-
-            var filePath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\20260428-20260528.xlsx";
-            var imageFolder = @"C:\Users\liusi\Desktop\PRD-Report\NEW\Image";
-
-
-            // 打开文件
-            using var wb = new XLWorkbook(filePath); // XLWorkbook 就是它
-            var ws = wb.Worksheet("Sheet1");
-
-            int rowCount = ws.RowsUsed().Count();
-
-            for (int row = 2; row <= rowCount; row++)  // 第2行开始（跳过表头）
+            finally
             {
-                // 读取 A 列编号 ✅
-                string TreeObjectId = ws.Cell(row, 10).GetString().Trim();
-
-                if (string.IsNullOrEmpty(TreeObjectId)) continue;
-
-                // 找 [id] 开头的图片
-                string findName = $"[{TreeObjectId}]";
-                string found = FindImage(imageFolder, findName);
-
-
-              
-                if (!string.IsNullOrWhiteSpace(found))
+                foreach (var stream in tempDocs)
                 {
-                    Console.WriteLine("No." + row + ":存在文件，补充数据。");
-                    //写入文件名
-                    ws.Cell(row, 12).Value = found;
-
-                    //写入超链接（动态 L 列）
-                    // 🔥 正确公式：=HYPERLINK("Image\"&L2&"",L2)  自动变 L2、L3、L4...
-                    ws.Cell(row, 13).FormulaA1 = $"=HYPERLINK(\"Image\\\"&L{row}&\"\", L{row})";
+                    stream?.Dispose();
                 }
-                else
-                {
-                    Console.WriteLine("No." + row + ":不存在文件,跳过。");
-                }
-
-                //if (row>=260)
-                //{
-                //    break;
-                //}
             }
 
-            string targetPath = Path.Combine(Path.GetDirectoryName(filePath),  // 取原文件所在目录
-               Path.GetFileNameWithoutExtension(filePath) + "_"+DateTime.Now.ToString("yyyyMMddHHmmssfffffff")+".xlsx"  // 原名_结果
-             );
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive);
+            GC.WaitForPendingFinalizers();
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive);
 
-            wb.SaveAs(targetPath);
-            Console.WriteLine("完成！");
+            PrintMemory("After forced GC");
         }
 
-        static string FindImage(string folder, string startWith)
+        /// <summary>
+        /// 打印当前进程的内存使用情况
+        /// </summary>
+        private static void PrintMemory(string label)
         {
-            if (!Directory.Exists(folder))
-                return null;
+            var proc = Process.GetCurrentProcess();
+            proc.Refresh();
 
-            var files = Directory.GetFiles(folder, $"{startWith}*", SearchOption.TopDirectoryOnly);
-            return files.Length > 0 ? Path.GetFileName(files[0]) : null;
+            long managedMB = GC.GetTotalMemory(false) / 1024 / 1024;
+            long privateMB = proc.PrivateMemorySize64 / 1024 / 1024;
+            long workingMB = proc.WorkingSet64 / 1024 / 1024;
+
+            Console.WriteLine(
+                $"  [MEM] {label,-45} | Managed: {managedMB,5}MB | Private: {privateMB,5}MB | WorkingSet: {workingMB,5}MB");
         }
+        #endregion
+
+        #region LoadingImgStreamLowMemory（流式低内存方案 - iTextSharp直接写磁盘）
+
+        /// <summary>
+        /// 流式低内存方案：iTextSharp 逐张图片直接写入磁盘 PDF
+        /// 不分块、不合并、不缓存图片到内存
+        /// 全程只有一张图片在内存中，内存占用 ≈ 1张图片大小
+        /// </summary>
+        public static void LoadingImgStreamLowMemory()
+        {
+            string folderPath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\Image";
+            string saveFolderPath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\Output";
+
+            if (!Directory.Exists(folderPath))
+            {
+                Console.WriteLine($"文件夹不存在：{folderPath}");
+                return;
+            }
+
+            Directory.CreateDirectory(saveFolderPath);
+
+            var imageExtensions = new[] { "*.jpg", "*.jpeg", "*.png", "*.bmp", "*.gif", "*.tiff", "*.tif" };
+            var imagePaths = new List<string>();
+
+            foreach (string extension in imageExtensions)
+            {
+                try
+                {
+                    imagePaths.AddRange(Directory.GetFiles(folderPath, extension, SearchOption.AllDirectories));
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"搜索 {extension} 文件时出错：{ex.Message}");
+                }
+            }
+
+            if (imagePaths.Count == 0)
+            {
+                Console.WriteLine($"文件夹中没有找到图片文件：{folderPath}");
+                return;
+            }
+
+            PrintSystemInfo("LOW-MEM");
+            Console.WriteLine($"[LOW-MEM] 共发现 {imagePaths.Count} 张图片");
+            Console.WriteLine($"[LOW-MEM] 启动前: {GetProcessMemoryInfo("LOW-MEM")}");
+
+            var swTotal = Stopwatch.StartNew();
+            string finalPdfPath = Path.Combine(saveFolderPath, $"merged_{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
+
+            try
+            {
+                using (var fs = new FileStream(finalPdfPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920))
+                {
+                    var document = new Document(PageSize.A4, 0, 0, 0, 0);
+                    var writer = PdfWriter.GetInstance(document, fs);
+                    document.Open();
+
+                    float pageWidth = PageSize.A4.Width;
+                    float pageHeight = PageSize.A4.Height;
+
+                    for (int i = 0; i < imagePaths.Count; i++)
+                    {
+                        try
+                        {
+                            using var imgStream = new FileStream(imagePaths[i], FileMode.Open, FileAccess.Read, FileShare.Read);
+                            var image = iTextSharp.text.Image.GetInstance(imgStream);
+                            image.ScaleToFit(pageWidth, pageHeight);
+                            image.Alignment = Element.ALIGN_CENTER;
+
+                            document.NewPage();
+                            document.Add(image);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"[LOW-MEM] 图片处理失败 {Path.GetFileName(imagePaths[i])}: {ex.Message}");
+                        }
+
+                        if ((i + 1) % 100 == 0 || i == imagePaths.Count - 1)
+                        {
+                            Console.WriteLine($"[LOW-MEM] 进度: {i + 1}/{imagePaths.Count}. {GetProcessMemoryInfo("LOW-MEM")}");
+                        }
+                    }
+
+                    document.Close();
+                }
+
+                swTotal.Stop();
+                var fileInfo = new FileInfo(finalPdfPath);
+                Console.WriteLine($"[LOW-MEM] PDF已保存: {finalPdfPath}");
+                Console.WriteLine($"[LOW-MEM] 文件大小: {fileInfo.Length / 1024.0 / 1024.0:F2} MB");
+                Console.WriteLine($"[LOW-MEM] 总耗时: {swTotal.ElapsedMilliseconds}ms");
+                Console.WriteLine($"[LOW-MEM] 完成后: {GetProcessMemoryInfo("LOW-MEM")}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[LOW-MEM] 错误: {ex.Message}");
+                Console.WriteLine(ex.StackTrace);
+            }
+        }
+
         #endregion
     }
 }
