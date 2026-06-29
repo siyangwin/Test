@@ -8456,9 +8456,6 @@ namespace Test
                     {
                         document.Open();
 
-                        float pageWidth = PageSize.A4.Width;
-                        float pageHeight = PageSize.A4.Height;
-
                         for (int i = start; i < end; i++)
                         {
                             try
@@ -8490,6 +8487,7 @@ namespace Test
                                 image.ScaleToFit(width, height);
                                 image.Alignment = Element.ALIGN_CENTER;
 
+                                document.SetPageSize(new iTextSharp.text.Rectangle(width, height));
                                 document.NewPage();
                                 document.Add(image);
 
