@@ -99,7 +99,8 @@ namespace Test
 
             //LoadingImgByDaniel();
 
-            LoadingImgStreamLowMemory();
+            //LoadingImgStreamLowMemory();
+            LoadingImgStreamLowMemoryParallel();
 
             //LoadExcel();
             Console.WriteLine();
@@ -8271,9 +8272,9 @@ namespace Test
             try
             {
                 using (var fs = new FileStream(finalPdfPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920))
+                using (var document = new Document(PageSize.A4, 0, 0, 0, 0))
+                using (var writer = PdfWriter.GetInstance(document, fs))
                 {
-                    var document = new Document(PageSize.A4, 0, 0, 0, 0);
-                    var writer = PdfWriter.GetInstance(document, fs);
                     document.Open();
 
                     float pageWidth = PageSize.A4.Width;
@@ -8305,6 +8306,10 @@ namespace Test
                     document.Close();
                 }
 
+                GC.Collect(2, GCCollectionMode.Forced, true, true);
+                GC.WaitForPendingFinalizers();
+                GC.Collect(2, GCCollectionMode.Forced, true, true);
+
                 swTotal.Stop();
                 var fileInfo = new FileInfo(finalPdfPath);
                 Console.WriteLine($"[LOW-MEM] PDF已保存: {finalPdfPath}");
@@ -8316,6 +8321,255 @@ namespace Test
             {
                 Console.WriteLine($"[LOW-MEM] 错误: {ex.Message}");
                 Console.WriteLine(ex.StackTrace);
+            }
+        }
+
+        /// <summary>
+        /// API 版本：输入图片文件夹，输出 PDF 文件路径
+        /// 不返回 Stream，调用方只拿到文件路径，零内存占用
+        /// </summary>
+        public static string MergeImagesToPdf(string imageFolderPath, string outputFolderPath)
+        {
+            var imageExtensions = new[] { "*.jpg", "*.jpeg", "*.png", "*.bmp", "*.gif", "*.tiff", "*.tif" };
+            var imagePaths = new List<string>();
+
+            foreach (string extension in imageExtensions)
+            {
+                try
+                {
+                    imagePaths.AddRange(Directory.GetFiles(imageFolderPath, extension, SearchOption.AllDirectories));
+                }
+                catch { }
+            }
+
+            if (imagePaths.Count == 0)
+                return null;
+
+            Directory.CreateDirectory(outputFolderPath);
+            string pdfPath = Path.Combine(outputFolderPath, $"merged_{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
+
+            using (var fs = new FileStream(pdfPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920))
+            using (var document = new Document(PageSize.A4, 0, 0, 0, 0))
+            using (var writer = PdfWriter.GetInstance(document, fs))
+            {
+                document.Open();
+
+                float pageWidth = PageSize.A4.Width;
+                float pageHeight = PageSize.A4.Height;
+
+                for (int i = 0; i < imagePaths.Count; i++)
+                {
+                    try
+                    {
+                        using var imgStream = new FileStream(imagePaths[i], FileMode.Open, FileAccess.Read, FileShare.Read);
+                        var image = iTextSharp.text.Image.GetInstance(imgStream);
+                        image.ScaleToFit(pageWidth, pageHeight);
+                        image.Alignment = Element.ALIGN_CENTER;
+
+                        document.NewPage();
+                        document.Add(image);
+                    }
+                    catch { }
+                }
+
+                document.Close();
+            }
+
+            GC.Collect(2, GCCollectionMode.Forced, true, true);
+            GC.WaitForPendingFinalizers();
+            GC.Collect(2, GCCollectionMode.Forced, true, true);
+
+            return pdfPath;
+        }
+
+        /// <summary>
+        /// 多线程测试：Parallel 分块生成临时 PDF → 合并为最终 PDF
+        /// 每个线程处理一个 chunk，写入独立临时文件（线程安全）
+        /// 合并阶段单线程顺序合并
+        /// </summary>
+        public static void LoadingImgStreamLowMemoryParallel()
+        {
+            string folderPath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\Image";
+            folderPath = @"C:\Users\liusi\Desktop\testtest";
+            string saveFolderPath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\Output";
+
+            if (!Directory.Exists(folderPath))
+            {
+                Console.WriteLine($"文件夹不存在：{folderPath}");
+                return;
+            }
+
+            Directory.CreateDirectory(saveFolderPath);
+
+            var imageExtensions = new[] { "*.jpg", "*.jpeg", "*.png", "*.bmp", "*.gif", "*.tiff", "*.tif" };
+            var imagePaths = new List<string>();
+
+            foreach (string extension in imageExtensions)
+            {
+                try
+                {
+                    imagePaths.AddRange(Directory.GetFiles(folderPath, extension, SearchOption.AllDirectories));
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"搜索 {extension} 文件时出错：{ex.Message}");
+                }
+            }
+
+            if (imagePaths.Count == 0)
+            {
+                Console.WriteLine($"文件夹中没有找到图片文件：{folderPath}");
+                return;
+            }
+
+            int chunkSize = 10;
+            int maxParallel = 1;
+            int batchCount = (imagePaths.Count + chunkSize - 1) / chunkSize;
+
+            PrintSystemInfo("PARALLEL");
+            Console.WriteLine($"[PARALLEL] 共发现 {imagePaths.Count} 张图片");
+            Console.WriteLine($"[PARALLEL] ChunkSize={chunkSize}, 并行度={maxParallel}, 批次数={batchCount}");
+            Console.WriteLine($"[PARALLEL] 启动前: {GetProcessMemoryInfo("PARALLEL")}");
+
+            var swTotal = Stopwatch.StartNew();
+            string tempDir = Path.GetTempPath();
+            var tempPaths = new string[batchCount];
+
+            try
+            {
+                var swChunk = Stopwatch.StartNew();
+
+                Parallel.For(0, batchCount, new ParallelOptions { MaxDegreeOfParallelism = maxParallel }, index =>
+                {
+                    var swChunkItem = Stopwatch.StartNew();
+                    string tempPath = Path.Combine(tempDir, $"lowmem_chunk_{Guid.NewGuid():N}.pdf");
+                    tempPaths[index] = tempPath;
+
+                    int start = index * chunkSize;
+                    int end = Math.Min(start + chunkSize, imagePaths.Count);
+
+                    Console.WriteLine($"[PARALLEL] Chunk {index + 1}/{batchCount} START (图片 {start + 1}-{end})");
+
+                    using (var fs = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920))
+                    using (var document = new Document(PageSize.A4, 0, 0, 0, 0))
+                    using (var writer = PdfWriter.GetInstance(document, fs))
+                    {
+                        document.Open();
+
+                        float pageWidth = PageSize.A4.Width;
+                        float pageHeight = PageSize.A4.Height;
+
+                        for (int i = start; i < end; i++)
+                        {
+                            try
+                            {
+                                using var imgStream = new FileStream(imagePaths[i], FileMode.Open, FileAccess.Read, FileShare.Read);
+
+
+                                float width, height;
+                                try
+                                {
+                                    var imageInfo = SixLabors.ImageSharp.Image.Identify(imgStream);
+                                    width = imageInfo.Width;
+                                    height = imageInfo.Height;
+                                }
+                                catch
+                                {
+                                    if (imgStream.CanSeek) imgStream.Position = 0;
+                                    using var imageInfo = SKImage.FromEncodedData(imgStream);
+                                    width = imageInfo.Width;
+                                    height = imageInfo.Height;
+                                }
+
+                                imgStream.Position = 0;
+
+
+                                var image = iTextSharp.text.Image.GetInstance(imgStream);
+
+                                //image.ScaleToFit(pageWidth, pageHeight);
+                                image.ScaleToFit(width, height);
+                                image.Alignment = Element.ALIGN_CENTER;
+
+                                document.NewPage();
+                                document.Add(image);
+
+                                Console.WriteLine($"[PARALLEL] Chunk {index + 1} 进度: {i - start + 1}/{end - start} ({Path.GetFileName(imagePaths[i])})");
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"[PARALLEL] 图片处理失败 {Path.GetFileName(imagePaths[i])}: {ex.Message}");
+                            }
+                        }
+
+                        document.Close();
+                    }
+
+                    swChunkItem.Stop();
+                    Console.WriteLine($"[PARALLEL] Chunk {index + 1}/{batchCount} DONE ({swChunkItem.ElapsedMilliseconds}ms)");
+                });
+
+                swChunk.Stop();
+                Console.WriteLine($"[PARALLEL] 分块完成: {swChunk.ElapsedMilliseconds}ms. {GetProcessMemoryInfo("PARALLEL")}");
+
+                GC.Collect(2, GCCollectionMode.Forced, true, true);
+                GC.WaitForPendingFinalizers();
+
+                var swMerge = Stopwatch.StartNew();
+
+                string finalPdfPath = Path.Combine(saveFolderPath, $"merged_parallel_{DateTime.Now:yyyyMMdd_HHmmssfffffff}.pdf");
+
+                using (var fs = new FileStream(finalPdfPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920))
+                {
+                    var finalDoc = new Document();
+                    var copy = new iTextSharp.text.pdf.PdfCopy(finalDoc, fs);
+                    finalDoc.Open();
+
+                    for (int i = 0; i < tempPaths.Length; i++)
+                    {
+                        if (string.IsNullOrEmpty(tempPaths[i]) || !File.Exists(tempPaths[i]))
+                            continue;
+
+                        Console.WriteLine($"[PARALLEL] 合并: {i + 1}/{tempPaths.Length}");
+                        var chunkDoc = new iTextSharp.text.pdf.PdfReader(tempPaths[i]);
+                        for (int p = 1; p <= chunkDoc.NumberOfPages; p++)
+                        {
+                            copy.AddPage(copy.GetImportedPage(chunkDoc, p));
+                        }
+                        chunkDoc.Close();
+                    }
+
+                    finalDoc.Close();
+                }
+
+                swMerge.Stop();
+                Console.WriteLine($"[PARALLEL] 合并完成: {swMerge.ElapsedMilliseconds}ms. {GetProcessMemoryInfo("PARALLEL")}");
+
+                foreach (var path in tempPaths)
+                {
+                    try { if (!string.IsNullOrEmpty(path) && File.Exists(path)) File.Delete(path); } catch { }
+                }
+
+                GC.Collect(2, GCCollectionMode.Forced, true, true);
+                GC.WaitForPendingFinalizers();
+                GC.Collect(2, GCCollectionMode.Forced, true, true);
+
+                swTotal.Stop();
+                var fileInfo = new FileInfo(finalPdfPath);
+                Console.WriteLine($"[PARALLEL] PDF已保存: {finalPdfPath}");
+                Console.WriteLine($"[PARALLEL] 文件大小: {fileInfo.Length / 1024.0 / 1024.0:F2} MB");
+                Console.WriteLine($"[PARALLEL] 分块耗时: {swChunk.ElapsedMilliseconds}ms, 合并耗时: {swMerge.ElapsedMilliseconds}ms");
+                Console.WriteLine($"[PARALLEL] 总耗时: {swTotal.ElapsedMilliseconds}ms");
+                Console.WriteLine($"[PARALLEL] 完成后: {GetProcessMemoryInfo("PARALLEL")}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[PARALLEL] 错误: {ex.Message}");
+                Console.WriteLine(ex.StackTrace);
+
+                foreach (var path in tempPaths)
+                {
+                    try { if (!string.IsNullOrEmpty(path) && File.Exists(path)) File.Delete(path); } catch { }
+                }
             }
         }
 
