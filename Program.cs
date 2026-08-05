@@ -106,9 +106,15 @@ namespace Test
             //LoadExcel();
 
             #region Crypto
-            string password = "Aa@123456";
-            string finalBase64 = EncryptPassword(password);
 
+
+            string password = "12345678";
+
+            //password = GetMD5(password).ToLower();
+
+            //Console.WriteLine("MD5:" + password);
+
+            string finalBase64 = EncryptPassword(password);
             Console.WriteLine("代码生成的结果: " + finalBase64);
             Console.WriteLine("文档期望的结果: oZU99ouWEbv/0DP+5Zy0fLKuiQ6NYOYdr1MEPUKC7k+flMeln7OOX0T/dcTVcnPbe6oStOR34L0rOVdAEscc2Cq6TGvDgj+q25ytE/yKGrQ=");
             #endregion
@@ -8504,13 +8510,41 @@ namespace Test
                 }
             }
 
+            string hex = BitConverter.ToString(encryptedBytes).Replace("-", "").ToLower();
+
+            Console.WriteLine("encryptedHEX:"+ hex);
+
+            Console.WriteLine("encryptedBase64:" + Convert.ToBase64String(encryptedBytes));
+
             // 第四步：将 IV 和 密文拼接，并进行 Base64 编码
             byte[] ivAndCipher = new byte[iv.Length + encryptedBytes.Length];
             Buffer.BlockCopy(iv, 0, ivAndCipher, 0, iv.Length);
             Buffer.BlockCopy(encryptedBytes, 0, ivAndCipher, iv.Length, encryptedBytes.Length);
 
+            string ivAndCipherhex = BitConverter.ToString(ivAndCipher).Replace("-", "").ToLower();
+
+            Console.WriteLine("iv+encrypted:" + ivAndCipherhex);
+
             return Convert.ToBase64String(ivAndCipher);
         }
+
+
+        /// <summary>
+        /// MD5加密
+        /// </summary>
+        /// <param name="key">传入参数</param>
+        /// <returns></returns>
+        public static string GetMD5(string key)
+        {
+            using (var md5 = MD5.Create())
+            {
+                var result = md5.ComputeHash(Encoding.UTF8.GetBytes(key));
+                var strResult = BitConverter.ToString(result);
+                string result3 = strResult.Replace("-", "");
+                return result3;
+            }
+        }
+
 
         /// <summary>
         /// 计算 SHA-256 并返回小写 HEX 字符串
