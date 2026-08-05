@@ -816,7 +816,7 @@ namespace Test
         {
             DateTime Pstarttime = DateTime.Now;
             //string folderPath = @"C:\Users\liusi\Desktop\Zxing";
-            string folderPath = @"C:\Users\liusi\Desktop\11";
+            string folderPath = @"C:\Users\liusi\Desktop\opencv";
             string SaveImageFile = @"C:\Users\liusi\Desktop\ZxingDemo";
             // 检查文件夹是否存在
             if (!Directory.Exists(folderPath))
@@ -2398,7 +2398,7 @@ namespace Test
         public static void OpenCv()
         {
             DateTime Pstarttime = DateTime.Now;
-            string folderPath = @"C:\Users\liusi\Desktop\一维码";
+            string folderPath = @"C:\Users\liusi\Desktop\opencv";
 
             //string folderPath = @"C:\Users\liusi\Desktop\PRD-Report\downloads";
             string SaveImageFile = @"C:\Users\liusi\Desktop\ZxingDemo";
@@ -2457,48 +2457,48 @@ namespace Test
                     try
                     {
                         #region 二维码
-                        // var OpenCVresults = code.DecodeByOpenCV(imagePath);
+                        var OpenCVresults = code.DecodeByOpenCV(imagePath);
 
 
-                        //var leftmostQRCode=FindLeftmostQRCode(OpenCVresults);
-                        // if (leftmostQRCode != null)
-                        // {
-                        //     Console.WriteLine($"  最左边二维码信息：");
-                        //     Console.WriteLine($"    类型：{leftmostQRCode.Type}");
-                        //     Console.WriteLine($"    内容：{leftmostQRCode.Content}");
+                        var leftmostQRCode = FindLeftmostQRCode(OpenCVresults);
+                        if (leftmostQRCode != null)
+                        {
+                            Console.WriteLine($"  最左边二维码信息：");
+                            Console.WriteLine($"    类型：{leftmostQRCode.Type}");
+                            Console.WriteLine($"    内容：{leftmostQRCode.Content}");
 
 
 
 
-                        //     // 显示坐标信息
-                        //     if (leftmostQRCode.resultPoints != null && leftmostQRCode.resultPoints.Length >= 4)
-                        //     {
-                        //         Console.WriteLine($"    左上角坐标：({leftmostQRCode.resultPoints[0]?.X:F1}, {leftmostQRCode.resultPoints[0]?.Y:F1})");
-                        //         Console.WriteLine($"    右上角坐标：({leftmostQRCode.resultPoints[1]?.X:F1}, {leftmostQRCode.resultPoints[1]?.Y:F1})");
-                        //         Console.WriteLine($"    右下角坐标：({leftmostQRCode.resultPoints[2]?.X:F1}, {leftmostQRCode.resultPoints[2]?.Y:F1})");
-                        //         Console.WriteLine($"    左下角坐标：({leftmostQRCode.resultPoints[3]?.X:F1}, {leftmostQRCode.resultPoints[3]?.Y:F1})");
-                        //     }
-                        // }
+                            // 显示坐标信息
+                            if (leftmostQRCode.resultPoints != null && leftmostQRCode.resultPoints.Length >= 4)
+                            {
+                                Console.WriteLine($"    左上角坐标：({leftmostQRCode.resultPoints[0]?.X:F1}, {leftmostQRCode.resultPoints[0]?.Y:F1})");
+                                Console.WriteLine($"    右上角坐标：({leftmostQRCode.resultPoints[1]?.X:F1}, {leftmostQRCode.resultPoints[1]?.Y:F1})");
+                                Console.WriteLine($"    右下角坐标：({leftmostQRCode.resultPoints[2]?.X:F1}, {leftmostQRCode.resultPoints[2]?.Y:F1})");
+                                Console.WriteLine($"    左下角坐标：({leftmostQRCode.resultPoints[3]?.X:F1}, {leftmostQRCode.resultPoints[3]?.Y:F1})");
+                            }
+                        }
 
-                        // // 处理识别结果
-                        // if (OpenCVresults != null && OpenCVresults.Count > 0)
-                        // {
-                        //     successCount++;
-                        //     Console.WriteLine($"  识别成功！找到 {OpenCVresults.Count} 个二维码：");
-                        //     foreach (var result in OpenCVresults)
-                        //     {
-                        //         Console.WriteLine($"    内容：{result.Content}");
-                        //     }
-                        // }
-                        // else
-                        // {
-                        //     failCount++;
-                        //     Console.WriteLine($"  识别失败：未找到二维码");
-                        // }
+                        // 处理识别结果
+                        if (OpenCVresults != null && OpenCVresults.Count > 0)
+                        {
+                            successCount++;
+                            Console.WriteLine($"  识别成功！找到 {OpenCVresults.Count} 个二维码：");
+                            foreach (var result in OpenCVresults)
+                            {
+                                Console.WriteLine($"    内容：{result.Content}");
+                            }
+                        }
+                        else
+                        {
+                            failCount++;
+                            Console.WriteLine($"  识别失败：未找到二维码");
+                        }
                         #endregion
 
                         //条形码
-                        var OpenCVBarcoderesults = code.DetectBarcodesByOpenCv(imagePath);
+                        //var OpenCVBarcoderesults = code.DetectBarcodesByOpenCv(imagePath);
 
                         //OpenCVresults.AddRange(OpenCVBarcoderesults);
 
@@ -2851,7 +2851,7 @@ namespace Test
         }
 
         #region Json
-        static string Json = "{\"config\":[{\"formId\":\"EDC-BUDES-013\",\"page\":2,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\",\"病/親属/监腰大/獲授權大士策署\",\"病人/親屬/監護人簽署\",\"病人/親/護人策署\",\"病人/親丽/護人策署\",\"病人/親丽/監護人簽署\",\"病人/親/監護人署\",\"病人/親屬/監護人署\",\"病人/親屬/護人署\",\"病人/親屬/監護人策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\",\"生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80}},{\"formId\":\"URO-BUDES-009\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\",\"病/親属/监腰大/獲授權大士策署\",\"病人/親屬/監護人簽署\",\"病人/親/護人策署\",\"病人/親丽/護人策署\",\"病人/親丽/監護人簽署\",\"病人/親/監護人署\",\"病人/親屬/監護人署\",\"病人/親屬/護人署\",\"病人/親屬/監護人策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\",\"生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80}},{\"formId\":\"EDC-BUDES-002\",\"page\":4,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80},\"doctor\":{\"targetParameters\":[\"醫生策著\",\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\",\"生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80}},{\"formId\":\"EDC-BUDES-001\",\"page\":4,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\",\"生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80}},{\"formId\":\"ONG-BUDES-016\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\",\"病人/親/监護人/獲授權人士薯\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\",\"生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80}},{\"formId\":\"ONG-BUDES-012\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\",\"病人/親/端镇人/授松人士签馨\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\",\"生署\",\"劈生寇署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80}}],\"parameters\":{\"irregularThreshold\":20,\"blackRatioThreshold\":0.006}}";
+        static string Json = "{\"config\":[{\"formId\":\"ENT-BUDES-001\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士策署\",\"病人/親屬/監護人/授權人士簽署\",\"病人/親屬/監護人/授權人士署\",\"病人/親屬/監護人/授權人士策署\",\"病人/親屬/監護人/猎授權人士策署\",\"病人/親屬/監護人/獲授權大士策署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士署\",\"病人/親屬/護人/獲授權人士策署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士策署\",\"病人/親/護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親/護人/獲授權人士策署\",\"病人/親丽/護人/授權人士署\",\"病/親属/監護人/獲授權人士策署\",\"病/親属/监腰大/獲授權大士策署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親屬/監護人簽署\",\"病人/親屬/監護人署\",\"病人/親屬/監護人策署\",\"病人/親屬/護人簽署\",\"病人/親屬/護人署\",\"病人/親屬/護人策署\",\"病人/親/監護人簽署\",\"病人/親/監護人署\",\"病人/親/監護人策署\",\"病人/親/護人簽署\",\"病人/親/護人署\",\"病人/親/護人策署\",\"病人/親丽/監護人簽署\",\"病人/親丽/護人策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\",\"生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80}},{\"formId\":\"EDC-BUDES-013\",\"page\":2,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\",\"病/親属/监腰大/獲授權大士策署\",\"病人/親屬/監護人簽署\",\"病人/親/護人策署\",\"病人/親丽/護人策署\",\"病人/親丽/監護人簽署\",\"病人/親/監護人署\",\"病人/親屬/監護人署\",\"病人/親屬/護人署\",\"病人/親屬/監護人策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\",\"生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80}},{\"formId\":\"URO-BUDES-009\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\",\"病/親属/监腰大/獲授權大士策署\",\"病人/親屬/監護人簽署\",\"病人/親/護人策署\",\"病人/親丽/護人策署\",\"病人/親丽/監護人簽署\",\"病人/親/監護人署\",\"病人/親屬/監護人署\",\"病人/親屬/護人署\",\"病人/親屬/監護人策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\",\"生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80}},{\"formId\":\"EDC-BUDES-002\",\"page\":4,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80},\"doctor\":{\"targetParameters\":[\"醫生策著\",\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\",\"生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80}},{\"formId\":\"EDC-BUDES-001\",\"page\":4,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\",\"生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80}},{\"formId\":\"ONG-BUDES-016\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\",\"病人/親/监護人/獲授權人士薯\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\",\"生署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80}},{\"formId\":\"ONG-BUDES-012\",\"page\":3,\"patient\":{\"targetParameters\":[\"病人/親屬/監護人/獲授權人士簽署\",\"病人/親/護人/獲授權人士署\",\"病人/親屬/監護人/獲授權人士署\",\"病人/親/監護人/獲授權人士簽署\",\"病人/親屬/護人/獲授權人士簽署\",\"病人/親/监護人/獲授權人士署\",\"病人/親丽/護人/授權人士署\",\"病人/親/监護人/猎授權人士策署\",\"病人/親/端镇人/授松人士签馨\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80},\"doctor\":{\"targetParameters\":[\"醫生簽署\",\"醫生策署\",\"醫生簽\",\"醫生署\",\"医生簽署\",\"医生策署\",\"医生簽\",\"医生署\",\"生署\",\"劈生寇署\"],\"bottomReferenceParameters\":[\"Doctor'sSignature\"],\"rightReferenceParameters\":[\"醫生姓名\",\"医生姓名\",\"生姓名\"],\"signatureAreaWidth\":440,\"signatureAreaHeight\":80}}],\"parameters\":{\"irregularThreshold\":20,\"blackRatioThreshold\":0.006}}";
         #endregion
         static SignatureConfig SConfig = JsonSerializer.Deserialize<SignatureConfig>(Json);
 
@@ -2891,6 +2891,7 @@ namespace Test
             DateTime Pstarttime = DateTime.Now;
             //string folderPath = @"C:\Users\liusi\Desktop\Form";
             string folderPath = @"C:\Users\liusi\Desktop\Form";
+            folderPath = @"C:\Users\liusi\Desktop\ENT-BUDES-001";
             // 检查文件夹是否存在
             if (!Directory.Exists(folderPath))
             {
@@ -4939,7 +4940,7 @@ namespace Test
         {
             Console.WriteLine("开始执行下载任务");
 
-            int startId = 32044;
+            int startId = 102677;
             string baseUrl = "https://103.155.102.84/download?ID=";
             string saveDirectory = @"D:\DownloadFiles"; // 指定保存目录，可自行修改
 
@@ -4948,7 +4949,7 @@ namespace Test
 
 
 
-            for (int i = 0; i < 30; i++)
+            for (int i = 0; i < 47; i++)
             {
                 int currentId = startId + i;
                 string downloadUrl = baseUrl + currentId;
@@ -8035,192 +8036,6 @@ namespace Test
         }
         #endregion
 
-        #region LoadingImgByDaniel
-
-        private const int TotalImages = 100;       // 总图片数
-        private const int ChunkSize = 4;          // 每块图片数 (免费版建议设小)
-        private const int ImageWidth = 2000;      // 模拟图片宽度
-        private const int ImageHeight = 3000;     // 模拟图片高度
-
-        public static void LoadingImgByDaniel()
-        {
-            try
-            {
-                while (true)
-                {
-                    string folderPath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\Image";
-
-                    if (!Directory.Exists(folderPath))
-                    {
-                        Console.WriteLine($"文件夹不存在：{folderPath}");
-                        return;
-                    }
-
-                    var imageExtensions = new[] { "*.jpg", "*.jpeg", "*.png", "*.bmp", "*.gif", "*.tiff", "*.tif" };
-                    var imagePaths = new List<string>();
-
-                    foreach (string extension in imageExtensions)
-                    {
-                        try
-                        {
-                            imagePaths.AddRange(Directory.GetFiles(folderPath, extension, SearchOption.AllDirectories));
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"搜索 {extension} 文件时出错：{ex.Message}");
-                        }
-                    }
-
-                    var imageStreams = new List<Stream>();
-                    foreach (var item in imagePaths)
-                    {
-                        Stream stream = new FileStream(item, FileMode.Open, FileAccess.Read, FileShare.Read);
-                        imageStreams.Add(stream);
-                    }
-
-                    // 2. 执行分块处理（不含最终合并）
-                    try
-                    {
-                        ProcessChunksOnly2(imageStreams, ChunkSize);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"\n[ERROR] {ex.Message}");
-                        Console.ResetColor();
-                    }
-
-                    // 3. 清理测试数据
-                    foreach (var s in imageStreams) s?.Dispose();
-
-                    PrintMemory("After final cleanup");
-
-                    Console.WriteLine("\n按 Y 重新运行测试，按其他任意键退出...");
-                    var key = Console.ReadKey(intercept: true);
-                    if (key.Key != ConsoleKey.Y)
-                        break;
-
-                    Console.WriteLine("\n" + new string('-', 60) + "\n");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"错误：{ex.Message}");
-            }
-
-            Console.ReadKey();
-        }
-
-        /// <summary>
-        /// ★ 核心测试方法：仅执行分块生成，验证内存释放
-        /// </summary>
-        private static void ProcessChunksOnly2(List<Stream> imageStreams, int chunkSize)
-        {
-            var swTotal = Stopwatch.StartNew();
-            var finalStream = new MemoryStream();
-            var tempDocs = new List<MemoryStream>();
-
-            try
-            {
-                var batchCount = (imageStreams.Count + chunkSize - 1) / chunkSize;
-
-                tempDocs = new List<MemoryStream>(new MemoryStream[batchCount]);
-                Parallel.For(0, batchCount, new ParallelOptions { MaxDegreeOfParallelism = 2 }, index =>
-                {
-                    PrintMemory($"Chunk {index + 1}/{batchCount} START");
-
-                    var swChunk = Stopwatch.StartNew();
-
-                    using var chunkDoc = new Aspose.Pdf.Document();
-
-                    int start = index * chunkSize;
-                    int end = Math.Min(start + chunkSize, imageStreams.Count);
-
-                    for (int i = start; i < end; i++)
-                    {
-                        var stream = imageStreams[i];
-                        if (stream == null) continue;
-                        if (stream.CanSeek) stream.Position = 0;
-
-                        float width, height;
-                        using (var imageInfo = SkiaSharp.SKImage.FromEncodedData(stream))
-                        {
-                            width = imageInfo.Width;
-                            height = imageInfo.Height;
-                        }
-
-                        if (stream.CanSeek) stream.Position = 0;
-
-                        var page = chunkDoc.Pages.Add();
-                        page.PageInfo.Width = width;
-                        page.PageInfo.Height = height;
-                        page.PageInfo.Margin = new Aspose.Pdf.MarginInfo(0, 0, 0, 0);
-
-                        var pdfImage = new Aspose.Pdf.Image
-                        {
-                            ImageStream = stream,
-                            FixWidth = width,
-                            FixHeight = height,
-                            Margin = new Aspose.Pdf.MarginInfo(0, 0, 0, 0)
-                        };
-
-                        page.Paragraphs.Add(pdfImage);
-                    }
-
-                    var tempStream = new MemoryStream();
-                    chunkDoc.Save(tempStream);
-                    tempStream.Position = 0;
-
-                    tempDocs[index] = tempStream;
-
-                    swChunk.Stop();
-
-                    PrintMemory($"Chunk {index + 1}/{batchCount} END  ({swChunk.ElapsedMilliseconds}ms)");
-                });
-
-                swTotal.Stop();
-
-                foreach (var item in tempDocs)
-                {
-                    Console.WriteLine($"UploadPDF-MergeImagesToPdfStream: Output stream length: {item.Length}, swTotal: {swTotal.ElapsedMilliseconds}ms");
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("System:Failed to merge images to PDF: " + ex.Message, ex);
-            }
-            finally
-            {
-                foreach (var stream in tempDocs)
-                {
-                    stream?.Dispose();
-                }
-            }
-
-            GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive);
-            GC.WaitForPendingFinalizers();
-            GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive);
-
-            PrintMemory("After forced GC");
-        }
-
-        /// <summary>
-        /// 打印当前进程的内存使用情况
-        /// </summary>
-        private static void PrintMemory(string label)
-        {
-            var proc = Process.GetCurrentProcess();
-            proc.Refresh();
-
-            long managedMB = GC.GetTotalMemory(false) / 1024 / 1024;
-            long privateMB = proc.PrivateMemorySize64 / 1024 / 1024;
-            long workingMB = proc.WorkingSet64 / 1024 / 1024;
-
-            Console.WriteLine(
-                $"  [MEM] {label,-45} | Managed: {managedMB,5}MB | Private: {privateMB,5}MB | WorkingSet: {workingMB,5}MB");
-        }
-        #endregion
-
         #region LoadingImgStreamLowMemory（流式低内存方案 - iTextSharp直接写磁盘）
 
         /// <summary>
@@ -8391,6 +8206,8 @@ namespace Test
         {
             string folderPath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\Image";
             folderPath = @"C:\Users\liusi\Desktop\testtest";
+            folderPath = @"C:\Users\liusi\Desktop\opencv";
+            folderPath = @"C:\Users\liusi\Desktop\AI";
             string saveFolderPath = @"C:\Users\liusi\Desktop\PRD-Report\NEW\Output";
 
             if (!Directory.Exists(folderPath))
@@ -8421,6 +8238,15 @@ namespace Test
                 Console.WriteLine($"文件夹中没有找到图片文件：{folderPath}");
                 return;
             }
+
+
+            // 2. 按文件名【自然数字排序】
+            imagePaths.Sort((pathA, pathB) =>
+            {
+                string nameA = Path.GetFileNameWithoutExtension(pathA);
+                string nameB = Path.GetFileNameWithoutExtension(pathB);
+                return NaturalStringCompare(nameA, nameB);
+            });
 
             int chunkSize = 10;
             int maxParallel = 1;
@@ -8569,6 +8395,45 @@ namespace Test
                     try { if (!string.IsNullOrEmpty(path) && File.Exists(path)) File.Delete(path); } catch { }
                 }
             }
+        }
+
+
+        /// <summary>
+        /// 自然数字排序：1,2,11,12 而非 1,11,12,2
+        /// </summary>
+        private static int NaturalStringCompare(string a, string b)
+        {
+            int i = 0, j = 0;
+            while (i < a.Length && j < b.Length)
+            {
+                bool aIsDigit = char.IsDigit(a[i]);
+                bool bIsDigit = char.IsDigit(b[j]);
+
+                if (aIsDigit && bIsDigit)
+                {
+                    // 提取连续数字串
+                    int startA = i, startB = j;
+                    while (i < a.Length && char.IsDigit(a[i])) i++;
+                    while (j < b.Length && char.IsDigit(b[j])) j++;
+
+                    // 转数字对比
+                    if (long.TryParse(a.Substring(startA, i - startA), out long numA)
+                        && long.TryParse(b.Substring(startB, j - startB), out long numB))
+                    {
+                        if (numA != numB)
+                            return numA.CompareTo(numB);
+                    }
+                }
+                else
+                {
+                    // 普通字符字典序
+                    if (a[i] != b[j])
+                        return a[i].CompareTo(b[j]);
+                    i++; j++;
+                }
+            }
+            // 前缀相同，短的在前
+            return a.Length.CompareTo(b.Length);
         }
 
         #endregion
