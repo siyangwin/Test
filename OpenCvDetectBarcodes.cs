@@ -1,11 +1,11 @@
-﻿using OpenCvSharp;
+using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using ZXing;
-using static Test.Program;
+using static Test.QRCodeTest;
 
 namespace Test
 {

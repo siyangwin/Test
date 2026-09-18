@@ -1,8 +1,8 @@
-﻿using OpenCvSharp;
+using OpenCvSharp;
 using System.Drawing;
 using WebDriverBiDi.Bluetooth;
 using ZXing;
-using static Test.Program;
+using static Test.QRCodeTest;
 using Point = OpenCvSharp.Point;
 
 
