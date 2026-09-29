@@ -114,6 +114,14 @@ namespace Test
             //MiscTest.FormCsvCleaner();
             #endregion
 
+            #region  网站PDF信息获取
+            //下载PDF
+            //await DownLoadPdf.GetPage();
+
+            //识别文件内容
+            DownLoadPdf.RecognizePDFcontent();
+            #endregion
+
             Console.WriteLine();
             Console.ReadKey();
         }
