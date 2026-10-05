@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -378,40 +378,158 @@ var _hmt = _hmt || [];
         //读取本地PDF识别文件
         public static void RecognizePDFcontent()
         {
-            string savePath = @"C:\Users\liusi\Desktop\摇号数据\202609.pdf";
+            //string savePath = @"C:\Users\liusi\Desktop\摇号数据\201504单位电动小汽车摇号指标配置结果.pdf";
 
-            string pdfPath = savePath;
-            if (!File.Exists(pdfPath))
+            string folderPath = @"C:\Users\liusi\Desktop\摇号数据1";
+            // 检查文件夹是否存在
+            if (!Directory.Exists(folderPath))
             {
-                Console.WriteLine("文件不存在：" + pdfPath);
+                Console.WriteLine($"文件夹不存在：{folderPath}");
                 return;
             }
 
-            using var document = PdfDocument.Open(pdfPath);
+            // 获取文件夹中所有支持的图片格式
+            string[] imageExtensions = { "*.pdf"};
+            List<string> Files = new List<string>();
 
-            foreach (var page in document.GetPages())
+            foreach (string extension in imageExtensions)
             {
-                Console.WriteLine($"===== 第 {page.Number} 页 =====");
-
-                var letters = page.Letters;
-
-                // 按 Y 坐标分组，同一行归到一起
-                var lines = letters
-                    .GroupBy(l => Math.Round(l.Location.Y, 1))
-                    .OrderByDescending(g => g.Key)
-                    .Select(g => string.Concat(
-                        g.OrderBy(l => l.Location.X).Select(l => l.Value)
-                    ))
-                    .ToList();
-
-                foreach (var line in lines)
+                try
                 {
-                    string trimmed = line.Trim();
-                    if (string.IsNullOrEmpty(trimmed))
-                        continue;
+                    string[] files = Directory.GetFiles(folderPath, extension, SearchOption.AllDirectories);
+                    Files.AddRange(files);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"搜索 {extension} 文件时出错：{ex.Message}");
+                }
+            }
 
-                    // 这里做逐行分析
-                    Console.WriteLine(trimmed);
+            if (Files.Count == 0)
+            {
+                Console.WriteLine($"文件夹中没有找到文件：{folderPath}");
+                return;
+            }
+
+
+            foreach (var itemPath in Files)
+            {
+                string pdfPath = itemPath;
+                if (!File.Exists(pdfPath))
+                {
+                    Console.WriteLine("文件不存在：" + pdfPath);
+                    return;
+                }
+
+                Console.WriteLine("--------------------------------------------------------------------------------------------------");
+                Console.WriteLine($"--{pdfPath}--");
+                Console.WriteLine("--------------------------------------------------------------------------------------------------");
+
+                using var document = PdfDocument.Open(pdfPath);
+
+                //正文是否开始
+                bool Start = false;
+                foreach (var page in document.GetPages())
+                {
+                    //Console.WriteLine($"===== 第 {page.Number} 页 =====");
+                    var letters = page.Letters;
+
+                    // 按 Y 坐标分组，同一行归到一起
+                    var lines = letters
+                        .GroupBy(l => Math.Round(l.Location.Y, 1))
+                        .OrderByDescending(g => g.Key)
+                        .Select(g => string.Concat(
+                            g.OrderBy(l => l.Location.X).Select(l => l.Value)
+                        ))
+                        .ToList();
+
+                    foreach (var line in lines)
+                    {
+                        string trimmed = line.Trim();
+                        if (string.IsNullOrEmpty(trimmed))
+                            continue;
+
+                        //第一页
+                        if (page.Number == 1 && Start == false)
+                        {
+                            //本期编号：201504
+                            if (trimmed.IndexOf("编号") > 0)
+                            {
+                                Console.WriteLine("编号：" + trimmed.Substring(trimmed.IndexOf("：") + 1, (trimmed.Length - trimmed.IndexOf("：")) - 1));
+                                continue;
+                            }
+
+                            //本期描述：2015年04月单位指标配置
+                            if (trimmed.IndexOf("描述") > 0)
+                            {
+                                Console.WriteLine("描述：" + trimmed.Substring(trimmed.IndexOf("：") + 1, (trimmed.Length - trimmed.IndexOf("：")) - 1));
+                                continue;
+                            }
+
+                            //本期指标配置日期：2015-04-27
+                            if (trimmed.IndexOf("配置日期") > 0)
+                            {
+                                Console.WriteLine("配置日期：" + trimmed.Substring(trimmed.IndexOf("：") + 1, (trimmed.Length - trimmed.IndexOf("：")) - 1));
+                                continue;
+                            }
+                            //数据生成时间：2015-04-27 15:43:47
+                            if (trimmed.IndexOf("时间") > 0)
+                            {
+                                Console.WriteLine("生成时间：" + trimmed.Substring(trimmed.IndexOf("：") + 1, (trimmed.Length - trimmed.IndexOf("：")) - 1));
+                                continue;
+                            }
+                            //有效单位申请编码总数：28
+                            if (trimmed.IndexOf("编码总数") > 0)
+                            {
+                                Console.WriteLine("编码总数：" + trimmed.Substring(trimmed.IndexOf("：") + 1, (trimmed.Length - trimmed.IndexOf("：")) - 1));
+                                continue;
+                            }
+
+                            //配置单位普通指标总数：787
+                            if (trimmed.IndexOf("指标总数") > 0)
+                            {
+                                Console.WriteLine("指标总数：" + trimmed.Substring(trimmed.IndexOf("：") + 1, (trimmed.Length - trimmed.IndexOf("：")) - 1));
+                                continue;
+                            }
+
+                            //指标配置初始值：222666
+                            if (trimmed.IndexOf("配置初始值") > 0)
+                            {
+                                Console.WriteLine("配置初始值：" + trimmed.Substring(trimmed.IndexOf("：") + 1, (trimmed.Length - trimmed.IndexOf("：")) - 1));
+                                continue;
+                            }
+                        }
+
+
+                        //continue;
+                        //判断是否开始详细数据
+                        if (trimmed.IndexOf("序号") >= 0 && trimmed.IndexOf("申请编码") > 0 && (trimmed.IndexOf("名称") > 0 || trimmed.IndexOf("姓名") > 0))
+                        {
+                            Start = true;
+                            Console.WriteLine("详细数据开始识别");
+                            continue;
+                        }
+
+                        if (Start)
+                        {
+                            //使用正则表达式分割
+                            //string[] context = Regex.Split(trimmed, @"\s+");
+
+                            // 使用 Split 并移除空项
+                            //StringSplitOptions枚举  RemoveEmptyEntries 可以自动忽略连续的空格，只保留有实际内容的部分。
+                            string[] parts = trimmed.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+                            if (parts.Length >= 3)
+                            {
+                                string id = parts[0];           // 1
+                                string code = parts[1];         // 018087978944349
+                                string name = parts[2];         // 深圳市XX投资发展有限公司
+                                Console.WriteLine($"序号: {id}, 编码: {code}, 名称: {name}");
+                            }
+                        }
+                        // 这里做逐行分析
+                        //Console.WriteLine(trimmed);
+                    }
                 }
             }
         }

@@ -1,4 +1,4 @@
-﻿using Aspose.BarCode.BarCodeRecognition;
+using Aspose.BarCode.BarCodeRecognition;
 using SkiaSharp;
 using ZXing;
 using ZXing.Common;

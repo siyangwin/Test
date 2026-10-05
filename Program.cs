@@ -119,12 +119,12 @@ namespace Test
             //await DownLoadPdf.GetPage();
 
             //识别文件内容
-            //DownLoadPdf.RecognizePDFcontent();
+            DownLoadPdf.RecognizePDFcontent();
             #endregion
 
             #region 条形码生成
             //Barcode.GenerateBarcode("HN-23-853535-7");
-            Barcode.GenerateBarcodeBase64("HN-23-853535-7");
+            //Barcode.GenerateBarcodeBase64("HN-23-853535-7");
             #endregion
 
             Console.WriteLine();
