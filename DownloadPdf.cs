@@ -1,3 +1,4 @@
+using ClosedXML.Excel;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,9 +26,17 @@ namespace Test
                 string baseUrl = "https://xqctk.jtys.sz.gov.cn/gbl/";
                 string savePath = @"C:\Users\liusi\Desktop\摇号数据";
 
-                Console.WriteLine($"{baseUrl}index_{i}.html");
                 string Request = await CallApi($"{baseUrl}index_{i}.html");
-
+                if (i == 1)
+                {
+                    Console.WriteLine($"{baseUrl}index.html");
+                    Request = await CallApi($"{baseUrl}index.html");
+                }
+                else
+                {
+                    Console.WriteLine($"{baseUrl}index_{i}.html");
+                }
+              
                 #region //Demo
                 string Request1 = @"<!DOCTYPE html PUBLIC ""-//W3C//DTD XHTML 1.0 Transitional//EN"" ""http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"">
 <html xmlns=""http://www.w3.org/1999/xhtml"">
@@ -380,7 +389,7 @@ var _hmt = _hmt || [];
         {
             //string savePath = @"C:\Users\liusi\Desktop\摇号数据\201504单位电动小汽车摇号指标配置结果.pdf";
 
-            string folderPath = @"C:\Users\liusi\Desktop\摇号数据1";
+            string folderPath = @"C:\Users\liusi\Desktop\摇号数据";
             // 检查文件夹是否存在
             if (!Directory.Exists(folderPath))
             {
@@ -411,6 +420,7 @@ var _hmt = _hmt || [];
                 return;
             }
 
+            using var workbook = new XLWorkbook();
 
             foreach (var itemPath in Files)
             {
@@ -421,14 +431,40 @@ var _hmt = _hmt || [];
                     return;
                 }
 
+                bool Status = true;
+                if (pdfPath.IndexOf("个人") >= 0)
+                {
+                    Status = true;
+                }
+                else if(pdfPath.IndexOf("单位") >= 0)
+                {
+                    Status = false;
+                }
+                else
+                {
+                    //跳过
+                    Console.WriteLine("--------------------------------------------------------------------------------------------------");
+                    Console.WriteLine($"{pdfPath}没有标识，跳过");
+                    Console.WriteLine("--------------------------------------------------------------------------------------------------");
+                    continue;
+                }
+
                 Console.WriteLine("--------------------------------------------------------------------------------------------------");
                 Console.WriteLine($"--{pdfPath}--");
                 Console.WriteLine("--------------------------------------------------------------------------------------------------");
 
                 using var document = PdfDocument.Open(pdfPath);
-
                 //正文是否开始
                 bool Start = false;
+
+                string No = "";
+                string Desc = "";
+                string Date = "";
+                string Time = "";
+                string CodeCount = "";
+                string MetricCount = "";
+                string InitValue = "";
+
                 foreach (var page in document.GetPages())
                 {
                     //Console.WriteLine($"===== 第 {page.Number} 页 =====");
@@ -455,47 +491,61 @@ var _hmt = _hmt || [];
                             //本期编号：201504
                             if (trimmed.IndexOf("编号") > 0)
                             {
-                                Console.WriteLine("编号：" + trimmed.Substring(trimmed.IndexOf("：") + 1, (trimmed.Length - trimmed.IndexOf("：")) - 1));
+                                string  value = trimmed.Substring(trimmed.IndexOf("：") + 1, (trimmed.Length - trimmed.IndexOf("：")) - 1);
+                                No = value;
+                                Console.WriteLine("编号：" + value);
                                 continue;
                             }
 
                             //本期描述：2015年04月单位指标配置
                             if (trimmed.IndexOf("描述") > 0)
                             {
-                                Console.WriteLine("描述：" + trimmed.Substring(trimmed.IndexOf("：") + 1, (trimmed.Length - trimmed.IndexOf("：")) - 1));
+                                string value = trimmed.Substring(trimmed.IndexOf("：") + 1, (trimmed.Length - trimmed.IndexOf("：")) - 1);
+                                Desc = value;
+                                Console.WriteLine("描述：" + value);
                                 continue;
                             }
 
                             //本期指标配置日期：2015-04-27
                             if (trimmed.IndexOf("配置日期") > 0)
                             {
-                                Console.WriteLine("配置日期：" + trimmed.Substring(trimmed.IndexOf("：") + 1, (trimmed.Length - trimmed.IndexOf("：")) - 1));
+                                string value = trimmed.Substring(trimmed.IndexOf("：") + 1, (trimmed.Length - trimmed.IndexOf("：")) - 1);
+                                Date = value;
+                                Console.WriteLine("配置日期：" + value);
                                 continue;
                             }
                             //数据生成时间：2015-04-27 15:43:47
                             if (trimmed.IndexOf("时间") > 0)
                             {
-                                Console.WriteLine("生成时间：" + trimmed.Substring(trimmed.IndexOf("：") + 1, (trimmed.Length - trimmed.IndexOf("：")) - 1));
+                                string value = trimmed.Substring(trimmed.IndexOf("：") + 1, (trimmed.Length - trimmed.IndexOf("：")) - 1);
+                                Time = value;
+                                Console.WriteLine("生成时间：" + value);
                                 continue;
                             }
                             //有效单位申请编码总数：28
                             if (trimmed.IndexOf("编码总数") > 0)
                             {
-                                Console.WriteLine("编码总数：" + trimmed.Substring(trimmed.IndexOf("：") + 1, (trimmed.Length - trimmed.IndexOf("：")) - 1));
+                                string value = trimmed.Substring(trimmed.IndexOf("：") + 1, (trimmed.Length - trimmed.IndexOf("：")) - 1);
+                                CodeCount = value;
+                                Console.WriteLine("编码总数：" + value);
                                 continue;
                             }
 
                             //配置单位普通指标总数：787
                             if (trimmed.IndexOf("指标总数") > 0)
                             {
-                                Console.WriteLine("指标总数：" + trimmed.Substring(trimmed.IndexOf("：") + 1, (trimmed.Length - trimmed.IndexOf("：")) - 1));
+                                string value = trimmed.Substring(trimmed.IndexOf("：") + 1, (trimmed.Length - trimmed.IndexOf("：")) - 1);
+                                MetricCount = value;
+                                Console.WriteLine("指标总数：" + value);
                                 continue;
                             }
 
                             //指标配置初始值：222666
                             if (trimmed.IndexOf("配置初始值") > 0)
                             {
-                                Console.WriteLine("配置初始值：" + trimmed.Substring(trimmed.IndexOf("：") + 1, (trimmed.Length - trimmed.IndexOf("：")) - 1));
+                                string value = trimmed.Substring(trimmed.IndexOf("：") + 1, (trimmed.Length - trimmed.IndexOf("：")) - 1);
+                                InitValue = value;
+                                Console.WriteLine("配置初始值：" + value);
                                 continue;
                             }
                         }
@@ -507,6 +557,25 @@ var _hmt = _hmt || [];
                         {
                             Start = true;
                             Console.WriteLine("详细数据开始识别");
+
+                            int sheetNo = 1;
+                            if (!Status)
+                            {
+                                sheetNo = 2;
+                            }
+
+                            // 直接调用静态方法写入 Sheet1
+                            AppendRowToSheet(workbook, sheetNo, new object[]
+                            {
+                                No,
+                                Desc,
+                                Date,
+                                Time,
+                                CodeCount,
+                                MetricCount,
+                                InitValue
+                            });
+
                             continue;
                         }
 
@@ -525,14 +594,116 @@ var _hmt = _hmt || [];
                                 string code = parts[1];         // 018087978944349
                                 string name = parts[2];         // 深圳市XX投资发展有限公司
                                 Console.WriteLine($"序号: {id}, 编码: {code}, 名称: {name}");
+
+                                int sheetNo = 3;
+                                if (!Status)
+                                {
+                                    sheetNo = 4;
+                                }
+
+                                // 直接调用静态方法写入 Sheet1
+                                AppendRowToSheet(workbook, sheetNo, new object[]
+                                {
+                                   No,
+                                   id,
+                                   code,
+                                   name
+                                });
                             }
+
+
                         }
                         // 这里做逐行分析
                         //Console.WriteLine(trimmed);
                     }
                 }
             }
+            // 5. 最后保存
+            workbook.SaveAs(@$"{folderPath}\Result.xlsx");
         }
+
+
+
+        #region 写入Excel
+        /// <summary>
+        /// 写入第 1/2 个 Sheet：编号、描述、配置日期、生成时间、编码总数、指标总数、配置初始值
+        /// </summary>
+        private static readonly string[] Sheet1Headers = new[]
+        {
+        "编号", "描述", "配置日期", "生成时间", "编码总数", "指标总数", "配置初始值"
+    };
+
+        /// <summary>
+        /// 写入第 3/4 个 Sheet：编号、序号、编码、名称
+        /// </summary>
+        private static readonly string[] Sheet3Headers = new[]
+        {
+        "编号", "序号", "编码", "名称"
+    };
+
+        /// <summary>
+        /// 向指定的 Sheet 追加一行数据。如果 Sheet 不存在或没有表头，会自动初始化。
+        /// </summary>
+        /// <param name="workbook">当前的 XLWorkbook 实例</param>
+        /// <param name="sheetIndex">Sheet 编号（1-4）</param>
+        /// <param name="values">要写入的数据行</param>
+        public static void AppendRowToSheet(XLWorkbook workbook, int sheetIndex, IEnumerable<object> values)
+        {
+
+            if (workbook == null) throw new ArgumentNullException(nameof(workbook));
+            if (values == null) throw new ArgumentNullException(nameof(values));
+
+
+            // 决定使用哪套表头
+            string[] headers;
+
+            if (sheetIndex == 1 || sheetIndex == 2)
+            {
+                headers = Sheet1Headers;
+            }
+            else if (sheetIndex == 3 || sheetIndex == 4)
+            {
+                headers = Sheet3Headers;
+            }
+            else
+            {
+                throw new ArgumentOutOfRangeException(nameof(sheetIndex), "当前只支持 Sheet1~Sheet4。");
+            }
+
+            // 2. 获取或创建工作表
+            string sheetName = $"Sheet{sheetIndex}";
+            IXLWorksheet worksheet;
+
+            if (!workbook.Worksheets.TryGetWorksheet(sheetName, out worksheet))
+            {
+                worksheet = workbook.Worksheets.Add(sheetName);
+            }
+
+            // 3. 检查并初始化表头（如果第一行是空的，就写入表头）
+            if (worksheet.Cell(1, 1).IsEmpty())
+            {
+                for (int col = 0; col < headers.Length; col++)
+                {
+                    worksheet.Cell(1, col + 1).Value = headers[col];
+                    // 可选：给表头加个粗体
+                    worksheet.Cell(1, col + 1).Style.Font.Bold = true;
+                }
+            }
+
+            // 4. 计算下一行的行号
+            // LastRowUsed() 可能会比较慢，如果数据量极大，建议自己在外部维护行号
+            int nextRow = worksheet.LastRowUsed()?.RowNumber() + 1 ?? 2;
+
+            // 5. 写入数据
+            var dataList = values.ToList();
+            for (int col = 0; col < dataList.Count; col++)
+            {
+                // 防止列数超过表头太多，也可以不限制
+                worksheet.Cell(nextRow, col + 1).Value = dataList[col]?.ToString() ?? string.Empty;
+            }
+        }
+        #endregion
+
     }
 
     public class UrlInfo
