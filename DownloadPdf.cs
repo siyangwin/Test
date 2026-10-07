@@ -431,6 +431,8 @@ var _hmt = _hmt || [];
                     return;
                 }
 
+                string fileName = Path.GetFileName(pdfPath);
+
                 bool Status = true;
                 if (pdfPath.IndexOf("个人") >= 0)
                 {
@@ -444,13 +446,13 @@ var _hmt = _hmt || [];
                 {
                     //跳过
                     Console.WriteLine("--------------------------------------------------------------------------------------------------");
-                    Console.WriteLine($"{pdfPath}没有标识，跳过");
+                    Console.WriteLine($"{fileName}没有标识，跳过");
                     Console.WriteLine("--------------------------------------------------------------------------------------------------");
                     continue;
                 }
 
                 Console.WriteLine("--------------------------------------------------------------------------------------------------");
-                Console.WriteLine($"--{pdfPath}--");
+                Console.WriteLine($"--{fileName}--");
                 Console.WriteLine("--------------------------------------------------------------------------------------------------");
 
                 using var document = PdfDocument.Open(pdfPath);
@@ -567,6 +569,7 @@ var _hmt = _hmt || [];
                             // 直接调用静态方法写入 Sheet1
                             AppendRowToSheet(workbook, sheetNo, new object[]
                             {
+                                fileName,
                                 No,
                                 Desc,
                                 Date,
@@ -604,6 +607,7 @@ var _hmt = _hmt || [];
                                 // 直接调用静态方法写入 Sheet1
                                 AppendRowToSheet(workbook, sheetNo, new object[]
                                 {
+                                   fileName,
                                    No,
                                    id,
                                    code,
@@ -618,8 +622,10 @@ var _hmt = _hmt || [];
                     }
                 }
             }
+            Console.WriteLine("--------数据获取完毕，开始保存-----------");
             // 5. 最后保存
-            workbook.SaveAs(@$"{folderPath}\Result.xlsx");
+            workbook.SaveAs(@$"{folderPath}\Result{DateTime.Now.ToString("yyyyMMddHHmmssfffffff")}.xlsx");
+            Console.WriteLine("--------保存完毕-----------");
         }
 
 
@@ -630,7 +636,7 @@ var _hmt = _hmt || [];
         /// </summary>
         private static readonly string[] Sheet1Headers = new[]
         {
-        "编号", "描述", "配置日期", "生成时间", "编码总数", "指标总数", "配置初始值"
+        "文件名","编号", "描述", "配置日期", "生成时间", "编码总数", "指标总数", "配置初始值"
     };
 
         /// <summary>
@@ -638,7 +644,7 @@ var _hmt = _hmt || [];
         /// </summary>
         private static readonly string[] Sheet3Headers = new[]
         {
-        "编号", "序号", "编码", "名称"
+         "文件名","编号", "序号", "编码", "名称"
     };
 
         /// <summary>
